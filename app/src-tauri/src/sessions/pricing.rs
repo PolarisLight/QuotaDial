@@ -37,6 +37,7 @@ impl PriceCatalog {
 
 // Catalog version: 2026-07-29.
 // Sources:
+// https://developers.openai.com/api/docs/pricing
 // https://developers.openai.com/api/docs/models/gpt-5.6-sol
 // https://developers.openai.com/api/docs/models/gpt-5.6-terra
 // https://developers.openai.com/api/docs/models/gpt-5.6-luna
@@ -45,6 +46,13 @@ impl PriceCatalog {
 // https://developers.openai.com/api/docs/models/gpt-5.2
 // https://developers.openai.com/api/docs/models/gpt-5-codex
 const BUILT_IN_PRICES: &[PriceEntry] = &[
+    PriceEntry {
+        model: "gpt-5.5",
+        effective_from: 0,
+        input_per_million: 5.0,
+        cached_input_per_million: 0.5,
+        output_per_million: 30.0,
+    },
     PriceEntry {
         model: "gpt-5.6-sol",
         effective_from: 0,
@@ -126,6 +134,20 @@ mod tests {
         };
         let cost = prices
             .estimate("gpt-5.6-sol", 1_785_283_200, &tokens)
+            .unwrap();
+        assert_eq!(cost, 8.75);
+    }
+
+    #[test]
+    fn prices_gpt_5_5_at_the_standard_short_context_rate() {
+        let tokens = TokenBreakdown {
+            input_tokens: 1_000_000,
+            cached_input_tokens: 500_000,
+            output_tokens: 200_000,
+            reasoning_output_tokens: 0,
+        };
+        let cost = PriceCatalog::built_in()
+            .estimate("gpt-5.5", 1_785_283_200, &tokens)
             .unwrap();
         assert_eq!(cost, 8.75);
     }
