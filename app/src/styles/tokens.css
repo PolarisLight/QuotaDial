@@ -1,0 +1,101 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", sans-serif;
+  font-synthesis: none;
+  --canvas: #dfe5ed;
+  --window: rgb(246 248 251 / 88%);
+  --sidebar: rgb(226 232 240 / 74%);
+  --surface: #fbfcfe;
+  --surface-raised: #ffffff;
+  --text: #17191d;
+  --muted: #656d79;
+  --subtle: #8d95a1;
+  --line: rgb(37 45 58 / 8%);
+  --line-strong: rgb(37 45 58 / 14%);
+  --accent: #176fd1;
+  --accent-soft: rgb(23 111 209 / 11%);
+  --success: #257a55;
+  --warning: #80651d;
+  --danger: #bd4545;
+  --shadow-window: 0 28px 80px rgb(30 45 66 / 20%);
+  --shadow-panel: 0 1px 2px rgb(30 45 66 / 4%);
+  --radius-window: 22px;
+  --radius-panel: 17px;
+  --radius-control: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #111318;
+    --window: rgb(31 34 40 / 90%);
+    --sidebar: rgb(42 46 54 / 72%);
+    --surface: #343840;
+    --surface-raised: #3b4049;
+    --text: #f4f5f7;
+    --muted: #afb5bf;
+    --subtle: #8f97a4;
+    --line: rgb(255 255 255 / 8%);
+    --line-strong: rgb(255 255 255 / 14%);
+    --accent: #67a3ec;
+    --accent-soft: rgb(103 163 236 / 15%);
+    --success: #64bd91;
+    --warning: #d7b75d;
+    --danger: #ef8686;
+    --shadow-window: 0 28px 80px rgb(0 0 0 / 38%);
+    --shadow-panel: 0 1px 2px rgb(0 0 0 / 12%);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #dfe5ed;
+  --window: rgb(246 248 251 / 88%);
+  --sidebar: rgb(226 232 240 / 74%);
+  --surface: #fbfcfe;
+  --surface-raised: #ffffff;
+  --text: #17191d;
+  --muted: #656d79;
+  --subtle: #8d95a1;
+  --line: rgb(37 45 58 / 8%);
+  --line-strong: rgb(37 45 58 / 14%);
+  --accent: #176fd1;
+  --accent-soft: rgb(23 111 209 / 11%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #111318;
+  --window: rgb(31 34 40 / 90%);
+  --sidebar: rgb(42 46 54 / 72%);
+  --surface: #343840;
+  --surface-raised: #3b4049;
+  --text: #f4f5f7;
+  --muted: #afb5bf;
+  --subtle: #8f97a4;
+  --line: rgb(255 255 255 / 8%);
+  --line-strong: rgb(255 255 255 / 14%);
+  --accent: #67a3ec;
+  --accent-soft: rgb(103 163 236 / 15%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --window: #f6f8fb;
+    --sidebar: #e7ecf3;
+  }
+
+  :root[data-theme="dark"] {
+    --window: #1f2228;
+    --sidebar: #2a2e36;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --muted: #454b54;
+    --line: rgb(24 29 36 / 22%);
+    --line-strong: rgb(24 29 36 / 34%);
+  }
+}
