@@ -7,6 +7,7 @@ pub mod monitor;
 pub mod sessions;
 pub mod storage;
 pub mod tray;
+pub mod tray_icon;
 
 use commands::AppState;
 use monitor::{AccountMonitor, CodexAccountSource};
