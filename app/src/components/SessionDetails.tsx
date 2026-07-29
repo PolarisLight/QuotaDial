@@ -7,7 +7,6 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { backend } from "../lib/backend";
-import { summarizeMonthlyValue } from "../lib/costSummary";
 import {
   sortSessions,
   type SessionSort,
@@ -20,7 +19,6 @@ import type {
 
 interface SessionDetailsProps {
   view: LocalSessionView;
-  monthlySubscriptionUsd: number;
 }
 
 const compactNumber = new Intl.NumberFormat("zh-CN", {
@@ -43,29 +41,22 @@ function formatActivity(timestamp: number) {
   }).format(new Date(timestamp * 1_000));
 }
 
-function formatCost(session: SessionSummary) {
-  if (session.equivalentCostUsd === null) return "费用待定";
-  const prefix = session.unpricedTokens > 0 ? "≥" : "≈";
-  const digits = session.equivalentCostUsd < 1 ? 2 : 1;
-  return `${prefix} US$${session.equivalentCostUsd.toFixed(digits)}`;
+function formatCost(cost: number | null, unpricedTokens: number) {
+  if (cost === null) return "费用待定";
+  const prefix = unpricedTokens > 0 ? "≥" : "≈";
+  const digits = cost < 1 ? 2 : 1;
+  return `${prefix} US$${cost.toFixed(digits)}`;
 }
 
 function projectName(path: string | null) {
   return path?.split(/[\\/]/).filter(Boolean).at(-1) ?? "未命名项目";
 }
 
-export function SessionDetails({
-  view,
-  monthlySubscriptionUsd,
-}: SessionDetailsProps) {
+export function SessionDetails({ view }: SessionDetailsProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
   const [sort, setSort] = useState<SessionSort>("recent");
   const sessions = sortSessions(view.sessions, sort);
-  const monthlyValue = summarizeMonthlyValue(
-    view.monthlySummary,
-    monthlySubscriptionUsd,
-  );
 
   const rescan = async () => {
     setRescanning(true);
@@ -93,22 +84,6 @@ export function SessionDetails({
           </span>
         )}
       </div>
-
-      <dl className="monthly-session-summary" aria-label="本月使用汇总">
-        <div>
-          <dt>本月 Token</dt>
-          <dd>{compactNumber.format(totalTokens(view.monthlySummary.tokens))}</dd>
-        </div>
-        <div>
-          <dt>本月等效价值</dt>
-          <dd>{monthlyValue.value}</dd>
-        </div>
-        <div>
-          <dt>回本比例</dt>
-          <dd>{monthlyValue.roi}</dd>
-          <small>{monthlyValue.roiNote}</small>
-        </div>
-      </dl>
 
       {view.diagnostics.lastError ? (
         <div className="session-error">
@@ -165,7 +140,7 @@ export function SessionDetails({
                       )
                     }
                   >
-                    Token
+                    本月 Token
                     {sort === "tokensDesc" ? (
                       <CaretDown size={10} />
                     ) : sort === "tokensAsc" ? (
@@ -173,7 +148,7 @@ export function SessionDetails({
                     ) : null}
                   </button>
                 </th>
-                <th>等效费用</th>
+                <th>本月等效费用</th>
                 <th>
                   <button
                     className={sort === "recent" ? "active" : ""}
@@ -250,8 +225,19 @@ function SessionRow({
         >
           {session.primaryModel ?? "未知模型"}
         </td>
-        <td>{compactNumber.format(totalTokens(session.tokens))}</td>
-        <td>{formatCost(session)}</td>
+        <td>
+          {compactNumber.format(
+            totalTokens(session.monthlyTokens ?? session.tokens),
+          )}
+        </td>
+        <td>
+          {formatCost(
+            session.monthlyEquivalentCostUsd === undefined
+              ? session.equivalentCostUsd
+              : session.monthlyEquivalentCostUsd,
+            session.monthlyUnpricedTokens ?? session.unpricedTokens,
+          )}
+        </td>
         <td className="session-secondary">{formatActivity(session.lastActiveAt)}</td>
       </tr>
       {expanded && (
@@ -259,19 +245,29 @@ function SessionRow({
           <td colSpan={6}>
             <dl className="session-breakdown">
               <div>
-                <dt>输入</dt>
+                <dt>历史总 Token</dt>
+                <dd>{fullNumber.format(totalTokens(session.tokens))}</dd>
+              </div>
+              <div>
+                <dt>历史总等效费用</dt>
+                <dd>
+                  {formatCost(session.equivalentCostUsd, session.unpricedTokens)}
+                </dd>
+              </div>
+              <div>
+                <dt>历史输入</dt>
                 <dd>{fullNumber.format(session.tokens.inputTokens)}</dd>
               </div>
               <div>
-                <dt>缓存输入</dt>
+                <dt>历史缓存输入</dt>
                 <dd>{fullNumber.format(session.tokens.cachedInputTokens)}</dd>
               </div>
               <div>
-                <dt>输出</dt>
+                <dt>历史输出</dt>
                 <dd>{fullNumber.format(session.tokens.outputTokens)}</dd>
               </div>
               <div>
-                <dt>其中推理</dt>
+                <dt>历史推理输出</dt>
                 <dd>{fullNumber.format(session.tokens.reasoningOutputTokens)}</dd>
               </div>
               {session.unpricedTokens > 0 && (

@@ -12,7 +12,9 @@ export function sortSessions(
 ): SessionSummary[] {
   return [...sessions].sort((left, right) => {
     if (sort === "recent") return right.lastActiveAt - left.lastActiveAt;
-    const delta = totalTokens(left.tokens) - totalTokens(right.tokens);
+    const delta =
+      totalTokens(left.monthlyTokens ?? left.tokens) -
+      totalTokens(right.monthlyTokens ?? right.tokens);
     if (delta === 0) return right.lastActiveAt - left.lastActiveAt;
     return sort === "tokensAsc" ? delta : -delta;
   });

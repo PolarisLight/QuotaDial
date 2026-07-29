@@ -136,10 +136,7 @@ export function DashboardView({
                     }
                   />
                 </section>
-                <SessionDetails
-                  view={snapshot.localSessions}
-                  monthlySubscriptionUsd={settings.monthlySubscriptionUsd}
-                />
+                <SessionDetails view={snapshot.localSessions} />
               </>
             )}
           </>

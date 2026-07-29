@@ -7,6 +7,7 @@ function session(
   sessionId: string,
   lastActiveAt: number,
   inputTokens: number,
+  monthlyInputTokens = inputTokens,
 ): SessionSummary {
   return {
     sessionId,
@@ -20,9 +21,18 @@ function session(
       outputTokens: 0,
       reasoningOutputTokens: 0,
     },
+    monthlyTokens: {
+      inputTokens: monthlyInputTokens,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      reasoningOutputTokens: 0,
+    },
     equivalentCostUsd: 0.01,
+    monthlyEquivalentCostUsd: 0.005,
     pricedTokens: inputTokens,
     unpricedTokens: 0,
+    monthlyPricedTokens: monthlyInputTokens,
+    monthlyUnpricedTokens: 0,
     childSessionCount: 0,
   };
 }
@@ -38,7 +48,6 @@ describe("SessionDetails", () => {
   test("clicking the Token column toggles descending and ascending order", () => {
     render(
       <SessionDetails
-        monthlySubscriptionUsd={20}
         view={{
           sessions: [
             session("new-small", 300, 100),
@@ -88,5 +97,41 @@ describe("SessionDetails", () => {
       "middle",
       "old-large",
     ]);
+  });
+
+  test("shows monthly usage in the row and historical totals after expansion", () => {
+    render(
+      <SessionDetails
+        view={{
+          sessions: [session("cross-month", 300, 1_000, 100)],
+          monthlySummary: {
+            periodStart: 0,
+            periodEnd: 1_000,
+            tokens: {
+              inputTokens: 100,
+              cachedInputTokens: 0,
+              outputTokens: 0,
+              reasoningOutputTokens: 0,
+            },
+            equivalentCostUsd: 0.005,
+            pricedTokens: 100,
+            unpricedTokens: 0,
+          },
+          diagnostics: {
+            scannedFiles: 1,
+            skippedLines: 0,
+            lastImportedAt: 300,
+            lastError: null,
+          },
+        }}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /cross-month/ });
+    expect(within(row).getAllByRole("cell")[3]).toHaveTextContent("100");
+    fireEvent.click(screen.getByRole("button", { name: "cross-month" }));
+    const totalTokenItem = screen.getByText("历史总 Token").parentElement!;
+    expect(within(totalTokenItem).getByText("1,000")).toBeVisible();
+    expect(screen.getByText("历史总等效费用")).toBeVisible();
   });
 });

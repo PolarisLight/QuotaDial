@@ -316,9 +316,13 @@ mod tests {
                 last_active_at: 1_785_330_000,
                 primary_model: None,
                 tokens: TokenBreakdown::default(),
+                monthly_tokens: TokenBreakdown::default(),
                 equivalent_cost_usd: None,
+                monthly_equivalent_cost_usd: None,
                 priced_tokens: 0,
                 unpriced_tokens: 0,
+                monthly_priced_tokens: 0,
+                monthly_unpriced_tokens: 0,
                 child_session_count: 0,
             })
             .collect();

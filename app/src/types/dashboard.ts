@@ -59,9 +59,13 @@ export interface SessionSummary {
   lastActiveAt: number;
   primaryModel: string | null;
   tokens: TokenBreakdown;
+  monthlyTokens: TokenBreakdown;
   equivalentCostUsd: number | null;
+  monthlyEquivalentCostUsd: number | null;
   pricedTokens: number;
   unpricedTokens: number;
+  monthlyPricedTokens: number;
+  monthlyUnpricedTokens: number;
   childSessionCount: number;
 }
 

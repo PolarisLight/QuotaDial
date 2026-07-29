@@ -15,9 +15,18 @@ function session(cost: number | null, unpricedTokens = 0): SessionSummary {
       outputTokens: 0,
       reasoningOutputTokens: 0,
     },
+    monthlyTokens: {
+      inputTokens: 0,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      reasoningOutputTokens: 0,
+    },
     equivalentCostUsd: cost,
+    monthlyEquivalentCostUsd: cost,
     pricedTokens: 0,
     unpricedTokens,
+    monthlyPricedTokens: 0,
+    monthlyUnpricedTokens: unpricedTokens,
     childSessionCount: 0,
   };
 }

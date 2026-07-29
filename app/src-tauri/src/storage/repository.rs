@@ -374,7 +374,8 @@ impl AccountRepository {
                 .model
                 .as_deref()
                 .and_then(|model| catalog.estimate(model, event.occurred_at, &event.tokens));
-            if (period_start..period_end).contains(&event.occurred_at) {
+            let is_current_month = (period_start..period_end).contains(&event.occurred_at);
+            if is_current_month {
                 monthly_summary.tokens.input_tokens += event.tokens.input_tokens;
                 monthly_summary.tokens.cached_input_tokens += event.tokens.cached_input_tokens;
                 monthly_summary.tokens.output_tokens += event.tokens.output_tokens;
@@ -399,6 +400,19 @@ impl AccountRepository {
             group.last_active_at = group.last_active_at.max(event.occurred_at);
             if event.session_id != group.root_id {
                 group.child_ids.insert(event.session_id.clone());
+            }
+            if is_current_month {
+                group.monthly_tokens.input_tokens += event.tokens.input_tokens;
+                group.monthly_tokens.cached_input_tokens += event.tokens.cached_input_tokens;
+                group.monthly_tokens.output_tokens += event.tokens.output_tokens;
+                group.monthly_tokens.reasoning_output_tokens +=
+                    event.tokens.reasoning_output_tokens;
+                if let Some(cost) = estimated_cost {
+                    group.monthly_cost_usd += cost;
+                    group.monthly_priced_tokens += event_tokens;
+                } else {
+                    group.monthly_unpriced_tokens += event_tokens;
+                }
             }
             if let Some(model) = event.model.as_deref() {
                 if !is_internal_review_model(model) {
@@ -438,6 +452,8 @@ impl AccountRepository {
                     .max_by_key(|(_, weight)| *weight)
                     .map(|(model, _)| model);
                 let has_known_cost = group.priced_tokens > 0 || group.tokens.total() == 0;
+                let has_known_monthly_cost =
+                    group.monthly_priced_tokens > 0 || group.monthly_tokens.total() == 0;
                 SessionSummary {
                     session_id: group.root_id,
                     title: session_title(project_path.as_deref(), started_at),
@@ -445,9 +461,14 @@ impl AccountRepository {
                     last_active_at: group.last_active_at,
                     primary_model,
                     tokens: group.tokens,
+                    monthly_tokens: group.monthly_tokens,
                     equivalent_cost_usd: has_known_cost.then_some(group.cost_usd),
+                    monthly_equivalent_cost_usd: has_known_monthly_cost
+                        .then_some(group.monthly_cost_usd),
                     priced_tokens: group.priced_tokens,
                     unpriced_tokens: group.unpriced_tokens,
+                    monthly_priced_tokens: group.monthly_priced_tokens,
+                    monthly_unpriced_tokens: group.monthly_unpriced_tokens,
                     child_session_count: group.child_ids.len() as i64,
                 }
             })
@@ -533,11 +554,15 @@ struct SessionAccumulator {
     root_id: String,
     last_active_at: i64,
     tokens: TokenBreakdown,
+    monthly_tokens: TokenBreakdown,
     child_ids: HashSet<String>,
     model_weights: HashMap<String, i64>,
     cost_usd: f64,
+    monthly_cost_usd: f64,
     priced_tokens: i64,
     unpriced_tokens: i64,
+    monthly_priced_tokens: i64,
+    monthly_unpriced_tokens: i64,
 }
 
 impl SessionAccumulator {
@@ -546,11 +571,15 @@ impl SessionAccumulator {
             root_id,
             last_active_at: 0,
             tokens: TokenBreakdown::default(),
+            monthly_tokens: TokenBreakdown::default(),
             child_ids: HashSet::new(),
             model_weights: HashMap::new(),
             cost_usd: 0.0,
+            monthly_cost_usd: 0.0,
             priced_tokens: 0,
             unpriced_tokens: 0,
+            monthly_priced_tokens: 0,
+            monthly_unpriced_tokens: 0,
         }
     }
 }
@@ -936,6 +965,15 @@ mod tests {
         let after_move = repository.local_session_view(now).unwrap().monthly_summary;
         assert_eq!(after_move.tokens.total(), 0);
         assert_eq!(after_move.equivalent_cost_usd, Some(0.0));
+        let session = repository
+            .local_session_view(now)
+            .unwrap()
+            .sessions
+            .remove(0);
+        assert_eq!(session.tokens.total(), 1_200);
+        assert_eq!(session.monthly_tokens.total(), 0);
+        assert!(session.equivalent_cost_usd.unwrap() > 0.0);
+        assert_eq!(session.monthly_equivalent_cost_usd, Some(0.0));
     }
 
     #[test]

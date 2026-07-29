@@ -7,6 +7,7 @@ function session(
   lastActiveAt: number,
   inputTokens: number,
   outputTokens: number,
+  monthlyInputTokens = inputTokens,
 ): SessionSummary {
   return {
     sessionId,
@@ -20,9 +21,18 @@ function session(
       outputTokens,
       reasoningOutputTokens: 0,
     },
+    monthlyTokens: {
+      inputTokens: monthlyInputTokens,
+      cachedInputTokens: 0,
+      outputTokens: 0,
+      reasoningOutputTokens: 0,
+    },
     equivalentCostUsd: null,
+    monthlyEquivalentCostUsd: null,
     pricedTokens: 0,
     unpricedTokens: 0,
+    monthlyPricedTokens: 0,
+    monthlyUnpricedTokens: 0,
     childSessionCount: 0,
   };
 }
@@ -46,6 +56,16 @@ describe("session sorting", () => {
     expect(
       sortSessions(sessions, "tokensAsc").map(item => item.sessionId),
     ).toEqual(["newer-small", "older-large"]);
+  });
+
+  test("sorts by this month's tokens instead of historical totals", () => {
+    const crossMonth = [
+      session("large-history-small-month", 200, 10_000, 0, 10),
+      session("small-history-large-month", 100, 100, 0, 90),
+    ];
+    expect(
+      sortSessions(crossMonth, "tokensDesc").map(item => item.sessionId),
+    ).toEqual(["small-history-large-month", "large-history-small-month"]);
   });
 
   test("does not mutate the backend array", () => {
