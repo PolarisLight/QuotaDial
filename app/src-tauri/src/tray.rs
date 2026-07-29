@@ -5,11 +5,14 @@ use crate::{
     sessions::service::SessionService,
     tray_icon::{render_tray_icon, TrayDialState},
 };
-use std::sync::Arc;
+use std::{
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use tauri::{
     image::Image,
-    menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{TrayIcon, TrayIconBuilder},
+    menu::{IconMenuItemBuilder, Menu, NativeIcon, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
 
@@ -39,7 +42,6 @@ fn live_tray_icon(state: TrayDialState) -> (Image<'static>, bool) {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MenuState {
     pub quota: String,
-    pub progress: String,
     pub reset: String,
     pub forecast: String,
     pub today_tokens: String,
@@ -47,19 +49,21 @@ pub struct MenuState {
     pub updated: String,
 }
 
+fn usage_glyph(used_percent: f64) -> &'static str {
+    match used_percent.clamp(0.0, 100.0) {
+        value if value < 12.5 => "○",
+        value if value < 37.5 => "◔",
+        value if value < 62.5 => "◑",
+        value if value < 87.5 => "◕",
+        _ => "●",
+    }
+}
+
 pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
-    let (quota, progress, reset) = snapshot.primary_quota.as_ref().map_or_else(
-        || {
-            (
-                "等待账号额度".to_owned(),
-                "消耗  —".to_owned(),
-                "重置  —".to_owned(),
-            )
-        },
+    let (quota, reset) = snapshot.primary_quota.as_ref().map_or_else(
+        || ("○  额度暂不可用".to_owned(), "重置  —".to_owned()),
         |quota| {
             let used = quota.used_percent.clamp(0.0, 100.0);
-            let filled = (used / 10.0).round() as usize;
-            let bar = format!("{}{}", "█".repeat(filled), "░".repeat(10 - filled));
             let reset = chrono::DateTime::from_timestamp(quota.resets_at, 0)
                 .map(|value| {
                     value
@@ -69,8 +73,11 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
                 })
                 .unwrap_or_else(|| "重置  —".into());
             (
-                format!("剩余 {:.0}% · 已消耗 {:.0}%", quota.remaining_percent, used),
-                format!("消耗  {bar}  {used:.0}%"),
+                format!(
+                    "{}  额度剩余 {:.0}% · 已用 {used:.0}%",
+                    usage_glyph(used),
+                    quota.remaining_percent
+                ),
                 reset,
             )
         },
@@ -116,7 +123,6 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
         .unwrap_or_else(|| "最近更新  —".into());
     MenuState {
         quota,
-        progress,
         reset,
         forecast,
         today_tokens,
@@ -135,32 +141,61 @@ fn format_token_count(tokens: i64) -> String {
     }
 }
 
+fn registers_double_click(last_click: &mut Option<Instant>, now: Instant) -> bool {
+    let is_double = last_click
+        .take()
+        .is_some_and(|previous| now.duration_since(previous) <= Duration::from_millis(420));
+    if !is_double {
+        *last_click = Some(now);
+    }
+    is_double
+}
+
 pub fn build(
     app: &AppHandle,
     monitor: Arc<AccountMonitor>,
     session_service: Arc<SessionService>,
 ) -> tauri::Result<TrayIcon> {
-    let quota = MenuItem::with_id(app, "quota", "等待账号额度", false, None::<&str>)?;
-    let progress = MenuItem::with_id(app, "progress", "消耗  —", false, None::<&str>)?;
-    let reset = MenuItem::with_id(app, "reset", "重置  —", false, None::<&str>)?;
-    let forecast = MenuItem::with_id(app, "forecast", "预测  正在积累样本", false, None::<&str>)?;
+    let quota = IconMenuItemBuilder::with_id("quota", "○  额度暂不可用")
+        .native_icon(NativeIcon::StatusNone)
+        .build(app)?;
+    let reset = IconMenuItemBuilder::with_id("reset", "重置  —")
+        .native_icon(NativeIcon::RefreshFreestanding)
+        .build(app)?;
+    let forecast = IconMenuItemBuilder::with_id("forecast", "预测  正在积累样本")
+        .native_icon(NativeIcon::SmartBadge)
+        .build(app)?;
     let separator_one = PredefinedMenuItem::separator(app)?;
-    let today_tokens = MenuItem::with_id(app, "today", "今日 Token  —", false, None::<&str>)?;
-    let sessions_count =
-        MenuItem::with_id(app, "session-count", "本机会话  0 个", false, None::<&str>)?;
-    let updated = MenuItem::with_id(app, "updated", "最近更新  —", false, None::<&str>)?;
+    let today_tokens = IconMenuItemBuilder::with_id("today", "今日 Token  —")
+        .native_icon(NativeIcon::ListView)
+        .build(app)?;
+    let sessions_count = IconMenuItemBuilder::with_id("session-count", "本机会话  0 个")
+        .native_icon(NativeIcon::Computer)
+        .build(app)?;
+    let updated = IconMenuItemBuilder::with_id("updated", "最近更新  —")
+        .native_icon(NativeIcon::StatusAvailable)
+        .build(app)?;
     let separator_two = PredefinedMenuItem::separator(app)?;
-    let show = MenuItem::with_id(app, "show", "打开仪表盘", true, None::<&str>)?;
-    let show_sessions = MenuItem::with_id(app, "sessions", "查看最近会话", true, None::<&str>)?;
-    let refresh = MenuItem::with_id(app, "refresh", "立即刷新", true, None::<&str>)?;
+    let show = IconMenuItemBuilder::with_id("show", "打开仪表盘")
+        .native_icon(NativeIcon::Home)
+        .build(app)?;
+    let show_sessions = IconMenuItemBuilder::with_id("sessions", "查看最近会话")
+        .native_icon(NativeIcon::QuickLook)
+        .build(app)?;
+    let refresh = IconMenuItemBuilder::with_id("refresh", "立即刷新")
+        .native_icon(NativeIcon::Refresh)
+        .build(app)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    let settings = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "退出 Codex Monitor", true, None::<&str>)?;
+    let settings = IconMenuItemBuilder::with_id("settings", "设置…")
+        .native_icon(NativeIcon::PreferencesGeneral)
+        .build(app)?;
+    let quit = IconMenuItemBuilder::with_id("quit", "退出 Codex Monitor")
+        .native_icon(NativeIcon::StopProgress)
+        .build(app)?;
     let menu = Menu::with_items(
         app,
         &[
             &quota,
-            &progress,
             &reset,
             &forecast,
             &separator_one,
@@ -183,6 +218,8 @@ pub fn build(
         used_percent: None,
         stale: false,
     });
+    let last_click = Arc::new(Mutex::new(None::<Instant>));
+    let tray_clicks = last_click.clone();
 
     let tray = TrayIconBuilder::with_id("codex-monitor")
         .icon(initial_icon)
@@ -192,14 +229,14 @@ pub fn build(
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| match event.id().as_ref() {
-            "show" => {
+            "show" | "quota" | "reset" | "forecast" => {
                 show_main_window(app);
             }
-            "sessions" => {
+            "sessions" | "today" | "session-count" => {
                 show_main_window(app);
                 let _ = app.emit("dashboard://focus-section", "sessions");
             }
-            "refresh" => {
+            "refresh" | "updated" => {
                 let monitor = menu_monitor.clone();
                 let sessions = menu_sessions.clone();
                 let refresh = refresh_item.clone();
@@ -216,11 +253,28 @@ pub fn build(
             "quit" => app.exit(0),
             _ => {}
         })
+        .on_tray_icon_event(move |tray, event| match event {
+            TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } => show_main_window(tray.app_handle()),
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } => {
+                if let Ok(mut previous) = tray_clicks.lock() {
+                    if registers_double_click(&mut previous, Instant::now()) {
+                        show_main_window(tray.app_handle());
+                    }
+                }
+            }
+            _ => {}
+        })
         .build(app)?;
 
     let tray_updates = tray.clone();
     let quota_updates = quota.clone();
-    let progress_updates = progress.clone();
     let reset_updates = reset.clone();
     let forecast_updates = forecast.clone();
     let today_updates = today_tokens.clone();
@@ -245,7 +299,6 @@ pub fn build(
             let _ = tray_updates.set_title(Some(title));
             let _ = tray_updates.set_tooltip(Some(tooltip));
             let _ = quota_updates.set_text(state.quota);
-            let _ = progress_updates.set_text(state.progress);
             let _ = reset_updates.set_text(state.reset);
             let _ = forecast_updates.set_text(state.forecast);
             let _ = today_updates.set_text(state.today_tokens);
@@ -387,8 +440,7 @@ mod tests {
     #[test]
     fn formats_complete_menu_status_from_one_snapshot() {
         let state = menu_state(&snapshot_with_quota_and_sessions());
-        assert_eq!(state.quota, "剩余 75% · 已消耗 25%");
-        assert_eq!(state.progress, "消耗  ███░░░░░░░  25%");
+        assert_eq!(state.quota, "◔  额度剩余 75% · 已用 25%");
         assert!(state.reset.starts_with("重置  8 月 5 日"));
         assert_eq!(state.forecast, "预测  重置前不会耗尽");
         assert_eq!(state.today_tokens, "今日 Token  3173.7 万");
@@ -402,7 +454,31 @@ mod tests {
             ..DashboardSnapshot::default()
         };
         let state = menu_state(&snapshot);
-        assert_eq!(state.quota, "等待账号额度");
+        assert_eq!(state.quota, "○  额度暂不可用");
         assert_eq!(state.sessions, "本机会话  3 个");
+    }
+
+    #[test]
+    fn recognizes_two_close_clicks_and_resets_the_sequence() {
+        let start = Instant::now();
+        let mut previous = None;
+        assert!(!registers_double_click(&mut previous, start));
+        assert!(registers_double_click(
+            &mut previous,
+            start + Duration::from_millis(300)
+        ));
+        assert!(!registers_double_click(
+            &mut previous,
+            start + Duration::from_millis(600)
+        ));
+    }
+
+    #[test]
+    fn maps_usage_to_a_compact_progress_glyph() {
+        assert_eq!(usage_glyph(0.0), "○");
+        assert_eq!(usage_glyph(25.0), "◔");
+        assert_eq!(usage_glyph(50.0), "◑");
+        assert_eq!(usage_glyph(75.0), "◕");
+        assert_eq!(usage_glyph(100.0), "●");
     }
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   QuotaHistoryPoint,
   QuotaPace,
@@ -23,6 +24,14 @@ const RIGHT = 670;
 const TOP = 10;
 const BOTTOM = 104;
 const PLOT_HEIGHT = BOTTOM - TOP;
+
+interface ChartTooltip {
+  key: string;
+  kind: "tokens" | "quota";
+  value: string;
+  x: number;
+  y: number;
+}
 
 function localMidnight(date: string) {
   const [year, month, day] = date.split("-").map(Number);
@@ -119,6 +128,7 @@ export function UsageQuotaChart({
   mode = "suggested",
   onModeChange = () => undefined,
 }: UsageQuotaChartProps) {
+  const [tooltip, setTooltip] = useState<ChartTooltip | null>(null);
   const visibleBuckets = buckets.slice(-7);
   const firstDate = visibleBuckets.at(0)?.startDate;
   const lastDate = visibleBuckets.at(-1)?.startDate;
@@ -281,6 +291,10 @@ export function UsageQuotaChart({
           </strong>
         </div>
       </div>
+      <div
+        className="usage-chart-stage"
+        onClick={() => setTooltip(null)}
+      >
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img">
         <title>最近 7 日 Token 柱形与剩余额度折线</title>
         {timeBoundaries.map((timestamp, index) => {
@@ -337,17 +351,48 @@ export function UsageQuotaChart({
             <g key={slot.key}>
               {slot.hasData ? (
                 <rect
-                  className="token-bar"
+                  aria-label={`${slot.title}，${slot.tokens.toLocaleString("zh-CN")} Token`}
+                  className={`token-bar interactive ${
+                    tooltip?.key === `tokens-${slot.key}` ? "active" : ""
+                  }`}
+                  role="button"
+                  tabIndex={0}
                   x={center - width / 2}
                   y={BOTTOM - height}
                   width={width}
                   height={height}
                   rx={5}
-                >
-                  <title>
-                    {slot.title}: {slot.tokens.toLocaleString("zh-CN")} Token
-                  </title>
-                </rect>
+                  onBlur={() => setTooltip(null)}
+                  onClick={event => {
+                    event.stopPropagation();
+                    setTooltip({
+                      key: `tokens-${slot.key}`,
+                      kind: "tokens",
+                      value: slot.tokens.toLocaleString("zh-CN"),
+                      x: center,
+                      y: BOTTOM - height,
+                    });
+                  }}
+                  onFocus={() =>
+                    setTooltip({
+                      key: `tokens-${slot.key}`,
+                      kind: "tokens",
+                      value: slot.tokens.toLocaleString("zh-CN"),
+                      x: center,
+                      y: BOTTOM - height,
+                    })
+                  }
+                  onMouseEnter={() =>
+                    setTooltip({
+                      key: `tokens-${slot.key}`,
+                      kind: "tokens",
+                      value: slot.tokens.toLocaleString("zh-CN"),
+                      x: center,
+                      y: BOTTOM - height,
+                    })
+                  }
+                  onMouseLeave={() => setTooltip(null)}
+                />
               ) : (
                 <line
                   className="token-slot-placeholder"
@@ -373,19 +418,82 @@ export function UsageQuotaChart({
             >
               <title>账号剩余额度</title>
             </path>
-            <circle
-              className="remaining-quota-point"
-              cx={quotaPoints.at(-1)!.x}
-              cy={quotaPoints.at(-1)!.y}
-              r={3.5}
-            >
-              <title>
-                剩余 {quotaPoints.at(-1)!.remainingPercent.toFixed(1)}%
-              </title>
-            </circle>
+            {quotaPoints.slice(1).map(point => {
+              const key = `quota-${point.observedAt}`;
+              const value = `${point.remainingPercent.toFixed(1)}%`;
+              const label = new Intl.DateTimeFormat("zh-CN", {
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(new Date(point.observedAt * 1_000));
+              return (
+                <circle
+                  aria-label={`${label}，剩余额度 ${value}`}
+                  className={`remaining-quota-point interactive ${
+                    tooltip?.key === key ? "active" : ""
+                  }`}
+                  cx={point.x}
+                  cy={point.y}
+                  key={key}
+                  r={3.5}
+                  role="button"
+                  tabIndex={0}
+                  onBlur={() => setTooltip(null)}
+                  onClick={event => {
+                    event.stopPropagation();
+                    setTooltip({
+                      key,
+                      kind: "quota",
+                      value,
+                      x: point.x,
+                      y: point.y,
+                    });
+                  }}
+                  onFocus={() =>
+                    setTooltip({
+                      key,
+                      kind: "quota",
+                      value,
+                      x: point.x,
+                      y: point.y,
+                    })
+                  }
+                  onMouseEnter={() =>
+                    setTooltip({
+                      key,
+                      kind: "quota",
+                      value,
+                      x: point.x,
+                      y: point.y,
+                    })
+                  }
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              );
+            })}
           </>
         )}
       </svg>
+      {tooltip && (
+        <output
+          className={`usage-chart-tooltip ${tooltip.kind} ${
+            tooltip.x < 90
+              ? "align-start"
+              : tooltip.x > WIDTH - 90
+                ? "align-end"
+                : ""
+          }`}
+          role="tooltip"
+          style={{
+            left: `${(tooltip.x / WIDTH) * 100}%`,
+            top: `${(tooltip.y / HEIGHT) * 100}%`,
+          }}
+        >
+          {tooltip.value}
+        </output>
+      )}
+      </div>
       <div className="usage-chart-legend" aria-hidden="true">
         <span className="legend-token">Token</span>
         <span className="legend-quota">剩余额度</span>

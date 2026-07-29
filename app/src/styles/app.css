@@ -585,6 +585,16 @@ h2 {
   overflow: visible;
 }
 
+.usage-chart-stage {
+  position: relative;
+  height: 132px;
+}
+
+.usage-chart-stage svg {
+  position: absolute;
+  inset: 0;
+}
+
 .usage-grid-line {
   stroke: var(--line);
   stroke-width: 1;
@@ -615,6 +625,20 @@ h2 {
   animation: rise 320ms ease-out both;
 }
 
+.token-bar.interactive,
+.remaining-quota-point.interactive {
+  cursor: default;
+  outline: none;
+  transition: opacity 120ms ease, filter 120ms ease, stroke-width 120ms ease;
+}
+
+.token-bar.interactive:hover,
+.token-bar.interactive:focus-visible,
+.token-bar.interactive.active {
+  opacity: 0.86;
+  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--accent) 38%, transparent));
+}
+
 .token-slot-placeholder {
   stroke: var(--line-strong);
   stroke-linecap: round;
@@ -639,6 +663,46 @@ h2 {
   fill: var(--surface);
   stroke: var(--text);
   stroke-width: 1.8;
+}
+
+.remaining-quota-point.interactive {
+  cursor: default;
+}
+
+.remaining-quota-point.interactive:hover,
+.remaining-quota-point.interactive:focus-visible,
+.remaining-quota-point.interactive.active {
+  r: 4.6px;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 22%));
+}
+
+.usage-chart-tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 48px;
+  padding: 5px 8px;
+  color: var(--text);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+  font-size: 10px;
+  font-weight: 680;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 7px));
+  backdrop-filter: blur(12px);
+}
+
+.usage-chart-tooltip.align-start {
+  transform: translate(0, calc(-100% - 7px));
+}
+
+.usage-chart-tooltip.align-end {
+  transform: translate(-100%, calc(-100% - 7px));
 }
 
 .usage-chart-legend {

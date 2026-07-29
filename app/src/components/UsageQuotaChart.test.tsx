@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import { UsageQuotaChart } from "./UsageQuotaChart";
 
@@ -27,6 +27,12 @@ const quota = {
 };
 
 describe("UsageQuotaChart", () => {
+  const interactiveHistory = [
+    { observedAt: start + 3_600, remainingPercent: 90 },
+    { observedAt: start + day + 3_600, remainingPercent: 75 },
+    { observedAt: start + 2 * day + 3_600, remainingPercent: 60 },
+  ];
+
   test("renders token bars and a remaining-quota line that descends over time", () => {
     const { container } = render(
       <UsageQuotaChart
@@ -61,7 +67,7 @@ describe("UsageQuotaChart", () => {
       .map(Number);
     expect(yCoordinates[1]).toBeGreaterThan(yCoordinates[0]);
     expect(yCoordinates[2]).toBeGreaterThan(yCoordinates[1]);
-    expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(1);
+    expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(3);
     expect(screen.getByText("近期消耗率 · 15.0%/天")).toBeVisible();
     expect(screen.getByText("剩余额度")).toBeVisible();
   });
@@ -81,6 +87,52 @@ describe("UsageQuotaChart", () => {
       container.querySelector('[data-testid="remaining-quota-line"]'),
     ).toBeNull();
     expect(screen.getByText("正在积累额度样本")).toBeVisible();
+  });
+
+  test("shows only the exact Token value when a bar is hovered or focused", () => {
+    render(
+      <UsageQuotaChart
+        buckets={buckets}
+        history={interactiveHistory}
+        pace={null}
+        quota={quota}
+        mode="recentRate"
+      />,
+    );
+    const bar = screen.getByLabelText("2026-07-29，70,000 Token");
+
+    fireEvent.mouseEnter(bar);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("70,000");
+    expect(screen.getByRole("tooltip")).not.toHaveTextContent("07/29");
+    expect(screen.getByRole("tooltip")).not.toHaveTextContent("Token");
+
+    fireEvent.mouseLeave(bar);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    fireEvent.focus(bar);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("70,000");
+    fireEvent.blur(bar);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  test("shows only the exact remaining percentage for an interactive line point", () => {
+    render(
+      <UsageQuotaChart
+        buckets={buckets}
+        history={interactiveHistory}
+        pace={null}
+        quota={quota}
+        mode="recentRate"
+      />,
+    );
+    const point = screen.getByLabelText(/60\.0%/);
+
+    fireEvent.mouseEnter(point);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("60.0%");
+    expect(screen.getByRole("tooltip")).not.toHaveTextContent("剩余额度");
+
+    fireEvent.mouseLeave(point);
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   test("labels slow and fast consumption without changing line direction", () => {
@@ -136,8 +188,9 @@ describe("UsageQuotaChart", () => {
 
     expect(screen.getByText("07/29")).toBeVisible();
     expect(container.querySelectorAll(".token-bar")).toHaveLength(1);
-    expect(
-      container.querySelector(".token-bar title")?.textContent,
-    ).toContain("2026-07-29");
+    expect(container.querySelector(".token-bar")).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("2026-07-29"),
+    );
   });
 });
