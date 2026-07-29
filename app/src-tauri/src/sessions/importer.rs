@@ -68,25 +68,28 @@ impl<'a> SessionImporter<'a> {
                     && identity.is_some()
                     && state.file_identity != identity)
         });
+        let parser_changed = previous
+            .as_ref()
+            .is_some_and(|state| state.parser_version != PARSER_VERSION);
         let generation = previous
             .as_ref()
             .map(|state| state.generation + i64::from(reset))
             .unwrap_or(0);
         let offset = previous
             .as_ref()
-            .filter(|_| !reset)
+            .filter(|_| !reset && !parser_changed)
             .map(|state| state.byte_offset)
             .unwrap_or(0);
         let context = previous
             .as_ref()
-            .filter(|_| !reset)
+            .filter(|_| !reset && !parser_changed)
             .map(|state| ParseContext {
                 session_id: state.session_id.clone(),
                 current_model: state.current_model.clone(),
             })
             .unwrap_or_default();
 
-        if offset == size && !reset {
+        if offset == size && !reset && !parser_changed {
             return Ok(ImportReport {
                 scanned_files: 1,
                 ..ImportReport::default()
@@ -226,6 +229,45 @@ mod tests {
         importer.reconcile(1_000).unwrap();
         importer.reconcile(2_000).unwrap();
 
+        assert_eq!(repository.session_event_count().unwrap(), 1);
+    }
+
+    #[test]
+    fn parser_version_change_replays_a_complete_file() {
+        let fixture = TestCodexHome::with_root_fixture();
+        let repository = AccountRepository::open_in_memory().unwrap();
+        let path = fixture
+            .session_file
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let bytes = include_bytes!("../../tests/fixtures/sessions/root.jsonl");
+        let parsed = crate::sessions::parser::parse_reader(bytes.as_slice(), &path, 0).unwrap();
+        repository
+            .import_session_file(
+                &SourceFileState {
+                    path: path.clone(),
+                    generation: 0,
+                    file_identity: None,
+                    byte_offset: parsed.next_offset as i64,
+                    observed_size: parsed.next_offset as i64,
+                    modified_at: 0,
+                    parser_version: PARSER_VERSION - 1,
+                    session_id: parsed.current_session_id.clone(),
+                    current_model: parsed.current_model.clone(),
+                    last_error: None,
+                },
+                &parsed,
+            )
+            .unwrap();
+
+        SessionImporter::new(&repository, fixture.path())
+            .reconcile(2_000)
+            .unwrap();
+
+        let state = repository.latest_source_state(&path).unwrap().unwrap();
+        assert_eq!(state.parser_version, PARSER_VERSION);
         assert_eq!(repository.session_event_count().unwrap(), 1);
     }
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{io::Read, path::Path};
 
-pub const PARSER_VERSION: i64 = 1;
+pub const PARSER_VERSION: i64 = 2;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct ParsedSessionMetadata {
