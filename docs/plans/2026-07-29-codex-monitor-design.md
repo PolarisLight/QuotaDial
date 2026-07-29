@@ -17,7 +17,8 @@ Build a desktop Codex usage monitor that remains accurate when:
 The application has two deliberately separate jobs:
 
 1. Show authoritative account-level remaining quota across all devices.
-2. Show locally attributable token usage and equivalent API cost by project and session.
+2. Show account-level daily Token activity across all devices when the service provides it.
+3. Show locally attributable token usage and equivalent API cost by project and session.
 
 Account quota is the source of truth for “how much quota is left.” Local logs are never
 used to reconstruct cross-device remaining quota.
@@ -30,7 +31,9 @@ used to reconstruct cross-device remaining quota.
 - Direct account-level quota reads through the authenticated Codex app-server.
 - Live quota updates and reset detection.
 - All available rate-limit buckets, including current and future bucket identifiers.
-- Reset-credit display when provided by the account API.
+- Preserve reset-credit fields in raw account observations when provided by the account API,
+  without dedicating dashboard space to them.
+- Account-level quota exhaustion forecasts based on observed percentage burn rate across all devices.
 - Local token accounting by project, root session, child session, and model.
 - Correct handling of forks, subagents, inherited context, replay, and counter resets.
 - Equivalent API-cost estimates with a built-in, updateable, user-overridable price catalog.
@@ -55,7 +58,7 @@ The UI must label values according to what they actually mean:
 |---|---|---|
 | Remaining quota and used percentage | Account, all devices | Codex app-server |
 | Scheduled reset time | Account/bucket | Codex app-server |
-| Reset credits | Account | Codex app-server |
+| Daily Token summary and trend | Account, all devices | Codex app-server `account/usage/read` |
 | Token and cost detail | Current device only | Local Codex event files |
 | Other-device token and cost detail | Unknown in v1 | Never inferred |
 
@@ -90,8 +93,8 @@ flowchart LR
     I --> L["Notification engine"]
 ```
 
-The account quota adapter and local importer write observations independently. A bad or
-missing local import therefore cannot corrupt the account-level quota display.
+The account adapter and local importer write observations independently. A bad or missing
+local import therefore cannot corrupt account-level quota or daily Token displays.
 
 ## 6. Account-Level Quota
 
@@ -112,6 +115,11 @@ It stores:
 After initialization, it subscribes to `account/rateLimits/updated`. It also performs a
 periodic read to recover from missed notifications and reads immediately after reconnect.
 
+The same authenticated connection calls `account/usage/read`. When available, its summary
+and daily usage buckets drive the account-level “today” Token value and Token trend. These
+values must be labeled “all devices.” A missing or unsupported response falls back to
+local-only Token data with an explicit “this device” label.
+
 ### Reset detection
 
 A reset observation is derived only from account data. It is classified as:
@@ -123,6 +131,19 @@ A reset observation is derived only from account data. It is classified as:
 
 Each classification retains the before/after observations and reason. A falling percentage
 must never produce negative usage or retroactively alter local token totals.
+
+### Exhaustion forecast
+
+The forecast uses account-level `usedPercent` observations rather than local Token usage, so
+simultaneous use from other computers is naturally included. It reports:
+
+- Estimated depletion timestamp and duration remaining.
+- Recent account burn rate in percentage points per hour.
+- Confidence based on sample count, observation span, and rate stability.
+- “This window is not expected to deplete” when projected exhaustion falls after `resetsAt`.
+
+Reset boundaries, bucket reconfiguration, long data gaps, and non-monotonic samples start a
+new forecast segment. The estimator must not bridge those boundaries.
 
 ## 7. Local Token Import
 
@@ -201,6 +222,7 @@ SQLite is divided conceptually into:
 ### Immutable/source-oriented tables
 
 - `account_rate_limit_observations`
+- `account_usage_observations`
 - `source_files`
 - `raw_usage_events`
 - `session_metadata_observations`
@@ -234,23 +256,38 @@ The compact view shows:
 
 - Primary quota percentage and time until scheduled recovery.
 - Additional rate-limit buckets when present.
-- Reset-credit count.
-- Current-device tokens and equivalent cost for today.
+- Estimated exhaustion time when the forecast is sufficiently reliable.
+- Account-level tokens for today when available; otherwise explicitly labeled current-device tokens.
 - Last successful account refresh.
 
 ### Dashboard
 
 The dashboard contains:
 
-- Account quota cards, one per server-provided bucket.
+- A primary seven-day quota panel, with secondary server-provided buckets available on demand.
+- A combined usage-and-forecast panel containing today’s account Tokens when available,
+  equivalent local API cost, account Token trend, account remaining-quota trend, burn rate,
+  and estimated depletion time.
 - Reset/recovery timeline.
-- Current-device usage charts by day, project, root session, child session, and model.
-- Session lineage view that exposes inherited versus owned usage.
+- A “Session details” list with one row per top-level user session.
+- Child/subagent owned usage rolled into its top-level session.
+- Optional diagnostic drill-down for lineage, inherited usage, and replay classification.
 - Cost breakdown and active price-catalog version.
 - Data-health panel for stale app-server data, parse failures, and ambiguous events.
 
 The words “all devices” and “this device” remain visible wherever the two scopes appear
-together.
+together. Accounting terms such as “root session,” “child,” “inherited,” and “replay” stay
+out of the normal dashboard and appear only in diagnostics.
+
+### Visual language
+
+- Native macOS utility feel using the system font and a single restrained blue accent.
+- Translucency is limited to structural layers such as the window and sidebar.
+- Data panels use more solid surfaces, restrained tinted shadows, and a consistent radius system.
+- Motion communicates entry or interaction state only; no decorative perpetual animation.
+- Controls respond on pointer-down and settle without distracting overshoot.
+- Follow system light/dark preference, with a manual override.
+- Support reduced motion, reduced transparency, and increased contrast.
 
 ## 12. Notifications
 
@@ -258,8 +295,8 @@ Users can configure thresholds per quota bucket. The application can notify on:
 
 - Usage crossing a selected percentage.
 - Time remaining crossing a selected duration.
+- Forecasted depletion crossing a selected duration.
 - Account quota reset or recovery.
-- Reset-credit availability changing.
 - Account data becoming stale.
 - Repeated local parsing errors.
 
@@ -312,11 +349,10 @@ Core invariants:
 ## 16. Delivery Order
 
 1. Establish project shell and shared domain types.
-2. Implement account quota adapter and live quota UI.
+2. Implement account quota adapter, forecast estimator, and live quota UI.
 3. Implement raw local importer and lineage discovery.
 4. Implement epoch-aware, fork-aware derived ledger.
 5. Add pricing and cost estimates.
 6. Add dashboard, menu bar, notifications, and diagnostics.
 7. Package and validate on macOS.
 8. Prepare Windows build instructions and defer device-specific tuning to the later Windows test.
-
