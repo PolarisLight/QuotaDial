@@ -54,6 +54,8 @@ const previewSnapshot: DashboardSnapshot = {
           reasoningOutputTokens: 8_900,
         },
         equivalentCostUsd: 0.49,
+        pricedTokens: 207_600,
+        unpricedTokens: 0,
         childSessionCount: 2,
       },
       {
@@ -69,6 +71,8 @@ const previewSnapshot: DashboardSnapshot = {
           reasoningOutputTokens: 5_200,
         },
         equivalentCostUsd: 0.67,
+        pricedTokens: 106_300,
+        unpricedTokens: 0,
         childSessionCount: 0,
       },
     ],

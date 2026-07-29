@@ -46,6 +46,8 @@ export interface SessionSummary {
   primaryModel: string | null;
   tokens: TokenBreakdown;
   equivalentCostUsd: number | null;
+  pricedTokens: number;
+  unpricedTokens: number;
   childSessionCount: number;
 }
 

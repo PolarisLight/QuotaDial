@@ -16,8 +16,6 @@ interface SessionDetailsProps {
   view: LocalSessionView;
 }
 
-const SESSION_DISPLAY_LIMIT = 8;
-
 const compactNumber = new Intl.NumberFormat("zh-CN", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -38,9 +36,11 @@ function formatActivity(timestamp: number) {
   }).format(new Date(timestamp * 1_000));
 }
 
-function formatCost(cost: number | null) {
-  if (cost === null) return "价格未知";
-  return `≈ US$${cost.toFixed(cost < 1 ? 2 : 1)}`;
+function formatCost(session: SessionSummary) {
+  if (session.equivalentCostUsd === null) return "费用待定";
+  const prefix = session.unpricedTokens > 0 ? "≥" : "≈";
+  const digits = session.equivalentCostUsd < 1 ? 2 : 1;
+  return `${prefix} US$${session.equivalentCostUsd.toFixed(digits)}`;
 }
 
 function projectName(path: string | null) {
@@ -50,7 +50,6 @@ function projectName(path: string | null) {
 export function SessionDetails({ view }: SessionDetailsProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
-  const visibleSessions = view.sessions.slice(0, SESSION_DISPLAY_LIMIT);
 
   const rescan = async () => {
     setRescanning(true);
@@ -74,7 +73,7 @@ export function SessionDetails({ view }: SessionDetailsProps) {
         </div>
         {view.sessions.length > 0 && (
           <span className="session-scan-time">
-            最近 {visibleSessions.length} 个会话
+            {view.sessions.length} 个会话
           </span>
         )}
       </div>
@@ -107,8 +106,11 @@ export function SessionDetails({ view }: SessionDetailsProps) {
           </div>
         </div>
       ) : (
-        <div className="session-table-wrap">
-          <table className="session-table">
+        <div
+          className="session-table-wrap"
+          style={{ overflowX: "hidden", overflowY: "auto" }}
+        >
+          <table className="session-table" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th>会话</th>
@@ -120,7 +122,7 @@ export function SessionDetails({ view }: SessionDetailsProps) {
               </tr>
             </thead>
             <tbody>
-              {visibleSessions.map(session => (
+              {view.sessions.map(session => (
                 <SessionRow
                   key={session.sessionId}
                   session={session}
@@ -163,17 +165,27 @@ function SessionRow({
           >
             <CaretDown className={expanded ? "expanded" : undefined} size={14} />
             <span>
-              <strong>{session.title}</strong>
+              <strong title={session.title}>{session.title}</strong>
               {session.childSessionCount > 0 && (
                 <small>含 {session.childSessionCount} 个子任务</small>
               )}
             </span>
           </button>
         </td>
-        <td className="session-secondary">{projectName(session.projectPath)}</td>
-        <td className="session-secondary">{session.primaryModel ?? "未知模型"}</td>
+        <td
+          className="session-secondary"
+          title={session.projectPath ?? "未命名项目"}
+        >
+          {projectName(session.projectPath)}
+        </td>
+        <td
+          className="session-secondary"
+          title={session.primaryModel ?? "未知模型"}
+        >
+          {session.primaryModel ?? "未知模型"}
+        </td>
         <td>{compactNumber.format(totalTokens(session.tokens))}</td>
-        <td>{formatCost(session.equivalentCostUsd)}</td>
+        <td>{formatCost(session)}</td>
         <td className="session-secondary">{formatActivity(session.lastActiveAt)}</td>
       </tr>
       {expanded && (
@@ -196,6 +208,14 @@ function SessionRow({
                 <dt>其中推理</dt>
                 <dd>{fullNumber.format(session.tokens.reasoningOutputTokens)}</dd>
               </div>
+              {session.unpricedTokens > 0 && (
+                <div>
+                  <dt>未定价</dt>
+                  <dd>
+                    {fullNumber.format(session.unpricedTokens)} 未定价 Token
+                  </dd>
+                </div>
+              )}
               <div className="session-path">
                 <dt>项目路径</dt>
                 <dd>{session.projectPath ?? "未知"}</dd>

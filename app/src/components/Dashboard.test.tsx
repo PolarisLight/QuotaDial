@@ -227,6 +227,8 @@ describe("Dashboard", () => {
                   reasoningOutputTokens: 70,
                 },
                 equivalentCostUsd: 0.02,
+                pricedTokens: 1_580,
+                unpricedTokens: 0,
                 childSessionCount: 1,
               },
             ],
@@ -245,7 +247,7 @@ describe("Dashboard", () => {
     expect(screen.queryByText("根会话")).not.toBeInTheDocument();
   });
 
-  test("shows only the eight most recent sessions", () => {
+  test("renders all sessions inside the session scroll region", () => {
     const sessions = Array.from({ length: 12 }, (_, index) => ({
       sessionId: `session-${index}`,
       title: `会话 ${index}`,
@@ -259,6 +261,8 @@ describe("Dashboard", () => {
         reasoningOutputTokens: 50,
       },
       equivalentCostUsd: 0.01,
+      pricedTokens: 1_200,
+      unpricedTokens: 0,
       childSessionCount: 0,
     }));
 
@@ -283,9 +287,116 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(container.querySelectorAll("tbody .session-row")).toHaveLength(8);
-    expect(screen.getByText("最近 8 个会话")).toBeVisible();
-    expect(screen.queryByText("会话 8")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("tbody .session-row")).toHaveLength(12);
+    expect(screen.getByText("12 个会话")).toBeVisible();
+    expect(screen.getByText("会话 8")).toBeVisible();
+  });
+
+  test("shows known cost as a lower bound when some tokens are unpriced", () => {
+    renderDashboard({
+      ...snapshot,
+      localSessions: {
+        ...snapshot.localSessions,
+        sessions: [
+          {
+            sessionId: "mixed-1",
+            title: "example-project · 7月29日",
+            projectPath: "/tmp/example-project",
+            lastActiveAt: 1_785_330_000,
+            primaryModel: "gpt-5.5",
+            tokens: {
+              inputTokens: 1_300,
+              cachedInputTokens: 500,
+              outputTokens: 250,
+              reasoningOutputTokens: 50,
+            },
+            equivalentCostUsd: 0.42,
+            pricedTokens: 1_200,
+            unpricedTokens: 350,
+            childSessionCount: 1,
+          },
+        ],
+      },
+    } as DashboardSnapshot);
+
+    expect(screen.getByText("≥ US$0.42")).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: /example-project · 7月29日/ }),
+    );
+    expect(screen.getByText("350 未定价 Token")).toBeVisible();
+  });
+
+  test("shows the user model instead of the internal review model", () => {
+    renderDashboard({
+      ...snapshot,
+      localSessions: {
+        ...snapshot.localSessions,
+        sessions: [
+          {
+            sessionId: "gpt-5-5",
+            title: "priced-session",
+            projectPath: "/tmp/priced",
+            lastActiveAt: 1_785_330_000,
+            primaryModel: "gpt-5.5",
+            tokens: {
+              inputTokens: 1_000,
+              cachedInputTokens: 400,
+              outputTokens: 200,
+              reasoningOutputTokens: 50,
+            },
+            equivalentCostUsd: 0.01,
+            pricedTokens: 1_200,
+            unpricedTokens: 0,
+            childSessionCount: 0,
+          },
+        ],
+      },
+    } as DashboardSnapshot);
+
+    expect(screen.getByText("gpt-5.5")).toBeVisible();
+    expect(screen.queryByText("codex-auto-review")).not.toBeInTheDocument();
+  });
+
+  test("uses a vertical session scroller and fixed columns", () => {
+    const { container } = render(
+      <DashboardView
+        snapshot={{
+          ...snapshot,
+          localSessions: {
+            ...snapshot.localSessions,
+            sessions: [
+              {
+                sessionId: "layout-1",
+                title: "layout session",
+                projectPath: "/tmp/layout",
+                lastActiveAt: 1_785_330_000,
+                primaryModel: "gpt-5.5",
+                tokens: {
+                  inputTokens: 1_000,
+                  cachedInputTokens: 400,
+                  outputTokens: 200,
+                  reasoningOutputTokens: 50,
+                },
+                equivalentCostUsd: 0.01,
+                pricedTokens: 1_200,
+                unpricedTokens: 0,
+                childSessionCount: 0,
+              },
+            ],
+          },
+        }}
+        loading={false}
+        refreshing={false}
+        error={null}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    const wrapper = container.querySelector(".session-table-wrap")!;
+    const table = container.querySelector(".session-table")!;
+    expect(getComputedStyle(wrapper).overflowX).toBe("hidden");
+    expect(getComputedStyle(wrapper).overflowY).toBe("auto");
+    expect(getComputedStyle(table).tableLayout).toBe("fixed");
   });
 
   test("uses the native window as the only scroll boundary", () => {
