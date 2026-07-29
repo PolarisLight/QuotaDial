@@ -16,7 +16,7 @@ const snapshot: DashboardSnapshot = {
     usedPercent: 18,
     remainingPercent: 82,
     windowDurationMins: 10_080,
-    resetsAt: 1_785_900_000,
+    resetsAt: new Date(2026, 6, 30).getTime() / 1_000,
     planType: "plus",
   },
   otherQuotas: [],
@@ -208,7 +208,7 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(container.querySelectorAll(".token-bar")).toHaveLength(7);
+    expect(container.querySelectorAll(".usage-date-label")).toHaveLength(7);
     expect(screen.queryByText("07/18")).not.toBeInTheDocument();
     expect(screen.getByText("07/29")).toBeVisible();
   });

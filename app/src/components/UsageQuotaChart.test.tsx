@@ -51,12 +51,15 @@ describe("UsageQuotaChart", () => {
       '[data-testid="remaining-quota-line"]',
     );
     expect(path).toHaveAttribute("d", expect.stringMatching(/^M /));
+    expect(path!.getAttribute("d")).toMatch(/^M 30\.0 10\.0/);
+    expect(path!.getAttribute("d")).toContain(" C ");
     const yCoordinates = path!
-      .getAttribute("d")!
-      .match(/(?:M|L) [\d.]+ ([\d.]+)/g)!
-      .map(command => Number(command.split(" ").at(-1)));
+      .getAttribute("data-y-values")!
+      .split(",")
+      .map(Number);
     expect(yCoordinates[1]).toBeGreaterThan(yCoordinates[0]);
     expect(yCoordinates[2]).toBeGreaterThan(yCoordinates[1]);
+    expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(1);
     expect(screen.getByText("正常 · 15.0%/天")).toBeVisible();
     expect(screen.getByText("剩余额度")).toBeVisible();
   });

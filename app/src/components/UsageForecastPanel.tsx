@@ -63,7 +63,8 @@ export function UsageForecastPanel({
   quota,
 }: UsageForecastPanelProps) {
   const copy = forecastCopy(forecast);
-  const buckets = usage?.dailyUsageBuckets.slice(-7) ?? [];
+  const dailyBuckets = usage?.dailyUsageBuckets ?? [];
+  const buckets = dailyBuckets.slice(-7);
   const today = buckets.at(-1)?.tokens ?? null;
 
   return (
@@ -94,7 +95,7 @@ export function UsageForecastPanel({
           </div>
 
           <UsageQuotaChart
-            buckets={buckets}
+            buckets={dailyBuckets}
             history={history}
             pace={pace}
             quota={quota}

@@ -29,6 +29,17 @@ function nextLocalMidnight(date: string) {
   return new Date(year, month - 1, day + 1).getTime() / 1_000;
 }
 
+function bucketMidpoint(date: string) {
+  return (localMidnight(date) + nextLocalMidnight(date)) / 2;
+}
+
+function shortDate(timestamp: number) {
+  const date = new Date(timestamp * 1_000);
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
@@ -53,6 +64,27 @@ function idealRemainingAt(
   return clampPercent(100 - elapsedDays * ratePerDay);
 }
 
+function smoothPath(points: Array<{ x: number; y: number }>) {
+  const first = points.at(0);
+  if (!first) return null;
+  let path = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)}`;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const controlOffset = (current.x - previous.x) * 0.42;
+    path += [
+      " C",
+      (previous.x + controlOffset).toFixed(1),
+      previous.y.toFixed(1),
+      (current.x - controlOffset).toFixed(1),
+      current.y.toFixed(1),
+      current.x.toFixed(1),
+      current.y.toFixed(1),
+    ].join(" ");
+  }
+  return path;
+}
+
 export function UsageQuotaChart({
   buckets,
   history,
@@ -62,13 +94,45 @@ export function UsageQuotaChart({
   const visibleBuckets = buckets.slice(-7);
   const firstDate = visibleBuckets.at(0)?.startDate;
   const lastDate = visibleBuckets.at(-1)?.startDate;
-  const rangeStart = firstDate ? localMidnight(firstDate) : null;
-  const rangeEnd = lastDate ? nextLocalMidnight(lastDate) : null;
+  const periodStart =
+    quota === null
+      ? null
+      : quota.resetsAt - quota.windowDurationMins * 60;
+  const rangeStart = periodStart ?? (firstDate ? localMidnight(firstDate) : null);
+  const rangeEnd =
+    quota?.resetsAt ?? (lastDate ? nextLocalMidnight(lastDate) : null);
   const rangeSeconds =
     rangeStart !== null && rangeEnd !== null ? rangeEnd - rangeStart : 0;
-  const maxTokens = Math.max(...visibleBuckets.map(bucket => bucket.tokens), 1);
+  const chartSlots =
+    quota && rangeStart !== null && rangeSeconds > 0
+      ? Array.from({ length: 7 }, (_, index) => {
+          const start = rangeStart + (rangeSeconds * index) / 7;
+          const end = rangeStart + (rangeSeconds * (index + 1)) / 7;
+          const matching = buckets.filter(bucket => {
+            const midpoint = bucketMidpoint(bucket.startDate);
+            return midpoint >= start && midpoint < end;
+          });
+          return {
+            key: `${start}`,
+            label: shortDate((start + end) / 2),
+            tokens: matching.reduce((sum, bucket) => sum + bucket.tokens, 0),
+            hasData: matching.length > 0,
+            title:
+              matching.length > 0
+                ? matching.map(bucket => bucket.startDate).join("、")
+                : "尚无数据",
+          };
+        })
+      : visibleBuckets.map(bucket => ({
+          key: bucket.startDate,
+          label: bucket.startDate.slice(5).replace("-", "/"),
+          tokens: bucket.tokens,
+          hasData: true,
+          title: bucket.startDate,
+        }));
+  const maxTokens = Math.max(...chartSlots.map(slot => slot.tokens), 1);
   const slotWidth =
-    visibleBuckets.length > 0 ? (RIGHT - LEFT) / visibleBuckets.length : 0;
+    chartSlots.length > 0 ? (RIGHT - LEFT) / chartSlots.length : 0;
 
   const xAt = (timestamp: number) => {
     if (rangeStart === null || rangeSeconds <= 0) return LEFT;
@@ -79,7 +143,7 @@ export function UsageQuotaChart({
     return LEFT + ratio * (RIGHT - LEFT);
   };
 
-  const quotaPoints =
+  const observedQuotaPoints =
     rangeStart === null || rangeEnd === null
       ? []
       : history
@@ -88,25 +152,30 @@ export function UsageQuotaChart({
               point.observedAt >= rangeStart && point.observedAt <= rangeEnd,
           )
           .sort((left, right) => left.observedAt - right.observedAt)
-          .map(point => ({
+          .filter(point => point.observedAt > rangeStart);
+  let previousRemaining = 100;
+  const quotaPoints =
+    rangeStart !== null && observedQuotaPoints.length >= 2
+      ? [
+          { observedAt: rangeStart, remainingPercent: 100 },
+          ...observedQuotaPoints,
+        ].map(point => {
+          const remainingPercent = Math.min(
+            previousRemaining,
+            clampPercent(point.remainingPercent),
+          );
+          previousRemaining = remainingPercent;
+          return {
             ...point,
+            remainingPercent,
             x: xAt(point.observedAt),
-            y: quotaY(point.remainingPercent),
-          }));
+            y: quotaY(remainingPercent),
+          };
+        })
+      : [];
   const remainingPath =
-    quotaPoints.length >= 2
-      ? quotaPoints
-          .map(
-            (point, index) =>
-              `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
-          )
-          .join(" ")
-      : null;
+    quotaPoints.length >= 2 ? smoothPath(quotaPoints) : null;
 
-  const periodStart =
-    quota === null
-      ? null
-      : quota.resetsAt - quota.windowDurationMins * 60;
   const idealRate =
     pace?.idealPercentPerDay ??
     (quota && quota.windowDurationMins > 0
@@ -143,7 +212,7 @@ export function UsageQuotaChart({
       aria-label="最近 7 日 Token 与剩余额度"
     >
       <div className="usage-chart-toolbar">
-        <span>最近 7 日</span>
+        <span>当前额度周期</span>
         <strong className={`quota-pace-pill ${pace?.status ?? "pending"}`}>
           {paceCopy(pace)}
         </strong>
@@ -178,29 +247,39 @@ export function UsageQuotaChart({
             />
           </>
         )}
-        {visibleBuckets.map((bucket, index) => {
+        {chartSlots.map((slot, index) => {
           const height = Math.max(
             7,
-            (bucket.tokens / maxTokens) * PLOT_HEIGHT,
+            (slot.tokens / maxTokens) * PLOT_HEIGHT,
           );
           const width = Math.min(26, slotWidth * 0.48);
           const center = LEFT + slotWidth * (index + 0.5);
           return (
-            <g key={bucket.startDate}>
-              <rect
-                className="token-bar"
-                x={center - width / 2}
-                y={BOTTOM - height}
-                width={width}
-                height={height}
-                rx={5}
-              >
-                <title>
-                  {bucket.startDate}: {bucket.tokens.toLocaleString("zh-CN")} Token
-                </title>
-              </rect>
+            <g key={slot.key}>
+              {slot.hasData ? (
+                <rect
+                  className="token-bar"
+                  x={center - width / 2}
+                  y={BOTTOM - height}
+                  width={width}
+                  height={height}
+                  rx={5}
+                >
+                  <title>
+                    {slot.title}: {slot.tokens.toLocaleString("zh-CN")} Token
+                  </title>
+                </rect>
+              ) : (
+                <line
+                  className="token-slot-placeholder"
+                  x1={center - width / 2}
+                  x2={center + width / 2}
+                  y1={BOTTOM}
+                  y2={BOTTOM}
+                />
+              )}
               <text className="usage-date-label" x={center} y={126}>
-                {bucket.startDate.slice(5).replace("-", "/")}
+                {slot.label}
               </text>
             </g>
           );
@@ -210,23 +289,21 @@ export function UsageQuotaChart({
             <path
               className="remaining-quota-line"
               data-testid="remaining-quota-line"
+              data-y-values={quotaPoints.map(point => point.y).join(",")}
               d={remainingPath}
             >
               <title>账号剩余额度</title>
             </path>
-            {quotaPoints.map(point => (
-              <circle
-                className="remaining-quota-point"
-                key={point.observedAt}
-                cx={point.x}
-                cy={point.y}
-                r={3.2}
-              >
-                <title>
-                  剩余 {point.remainingPercent.toFixed(1)}%
-                </title>
-              </circle>
-            ))}
+            <circle
+              className="remaining-quota-point"
+              cx={quotaPoints.at(-1)!.x}
+              cy={quotaPoints.at(-1)!.y}
+              r={3.5}
+            >
+              <title>
+                剩余 {quotaPoints.at(-1)!.remainingPercent.toFixed(1)}%
+              </title>
+            </circle>
           </>
         )}
       </svg>

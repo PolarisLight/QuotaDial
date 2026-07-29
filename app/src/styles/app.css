@@ -537,6 +537,12 @@ h2 {
   animation: rise 320ms ease-out both;
 }
 
+.token-slot-placeholder {
+  stroke: var(--line-strong);
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
 .usage-date-label {
   fill: var(--subtle);
   font-size: 8px;
