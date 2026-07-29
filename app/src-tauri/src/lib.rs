@@ -5,6 +5,7 @@ pub mod error;
 pub mod forecast;
 pub mod monitor;
 pub mod storage;
+pub mod tray;
 
 use commands::AppState;
 use monitor::{AccountMonitor, CodexAccountSource};
@@ -36,6 +37,7 @@ pub fn run() {
             let source = Arc::new(CodexAccountSource::new());
             let monitor = Arc::new(AccountMonitor::new(source, repository));
             let (shutdown, shutdown_receiver) = tokio::sync::watch::channel(false);
+            let _tray = tray::build(app.handle(), monitor.clone())?;
 
             let monitor_task = monitor.clone();
             tauri::async_runtime::spawn(monitor_task.run(shutdown_receiver));
