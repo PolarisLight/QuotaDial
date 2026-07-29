@@ -65,6 +65,13 @@ function renderDashboard(value = snapshot, onRefresh = vi.fn()) {
 }
 
 describe("Dashboard", () => {
+  test("uses the remaining-window brand instead of a waveform", () => {
+    renderDashboard();
+
+    expect(screen.getByLabelText("Codex Monitor 余量窗口")).toBeVisible();
+    expect(screen.queryByTestId("waveform-brand")).not.toBeInTheDocument();
+  });
+
   test("renders the approved account overview and terminology", () => {
     renderDashboard();
 

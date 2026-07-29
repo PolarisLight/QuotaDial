@@ -164,7 +164,7 @@ pub fn build(
     let refresh_item = refresh.clone();
 
     let tray = TrayIconBuilder::with_id("codex-monitor")
-        .icon(Image::from_bytes(include_bytes!("../icons/32x32.png"))?)
+        .icon(Image::from_bytes(include_bytes!("../icons/trayTemplate.png"))?)
         .icon_as_template(true)
         .tooltip("Codex Monitor")
         .title(tray_title(None, false))

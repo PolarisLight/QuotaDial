@@ -3,9 +3,9 @@ import {
   Moon,
   SlidersHorizontal,
   Sun,
-  Waveform,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { BrandMark } from "./BrandMark";
 
 type Theme = "light" | "dark" | "system";
 
@@ -34,9 +34,9 @@ export function AppSidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="brand" aria-label="Codex Monitor">
+      <div className="brand">
         <span className="brand-mark">
-          <Waveform size={18} weight="bold" />
+          <BrandMark />
         </span>
         <span>
           <strong>Codex</strong>

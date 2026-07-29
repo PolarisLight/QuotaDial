@@ -65,11 +65,32 @@ button:focus-visible {
   display: grid;
   width: 34px;
   height: 34px;
-  color: white;
-  background: var(--accent);
+  overflow: hidden;
+  background: linear-gradient(145deg, #294d40, #14231e);
   border-radius: 10px;
   place-items: center;
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 25%, transparent);
+  box-shadow: 0 7px 16px rgb(20 35 30 / 22%);
+}
+
+.brand-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-mark__frame {
+  fill: #f6f5ed;
+}
+
+.brand-mark__well {
+  fill: #1b3029;
+}
+
+.brand-mark__level {
+  fill: #70d5a5;
+}
+
+.brand-mark__glint {
+  fill: #f6f5ed;
 }
 
 .brand strong,
