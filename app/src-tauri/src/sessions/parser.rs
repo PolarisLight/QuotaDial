@@ -313,10 +313,7 @@ mod tests {
         let metadata = parsed.metadata.unwrap();
         assert_eq!(metadata.session_id, "guardian-1");
         assert_eq!(metadata.parent_session_id.as_deref(), Some("root-1"));
-        assert_eq!(
-            parsed.events[0].model.as_deref(),
-            Some("codex-auto-review")
-        );
+        assert_eq!(parsed.events[0].model.as_deref(), Some("codex-auto-review"));
     }
 
     #[test]

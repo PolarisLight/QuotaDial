@@ -132,8 +132,7 @@ fn median(values: &[f64]) -> Option<f64> {
 }
 
 fn ideal_pace(window_duration_mins: i64) -> Option<f64> {
-    (window_duration_mins > 0)
-        .then(|| 100.0 / (window_duration_mins as f64 / 1_440.0))
+    (window_duration_mins > 0).then(|| 100.0 / (window_duration_mins as f64 / 1_440.0))
 }
 
 fn classify_pace(percent_per_day: f64, window_duration_mins: i64) -> QuotaPaceStatus {
@@ -186,10 +185,7 @@ mod tests {
     #[test]
     fn classifies_seven_day_pace_with_a_twenty_percent_band() {
         assert_eq!(classify_pace(10.0, 10_080), QuotaPaceStatus::Slow);
-        assert_eq!(
-            classify_pace(14.2857, 10_080),
-            QuotaPaceStatus::Normal
-        );
+        assert_eq!(classify_pace(14.2857, 10_080), QuotaPaceStatus::Normal);
         assert_eq!(classify_pace(18.0, 10_080), QuotaPaceStatus::Fast);
     }
 

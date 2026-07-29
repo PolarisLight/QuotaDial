@@ -8,8 +8,7 @@ use crate::{
         dashboard::{AccountUsageView, DashboardSnapshot, QuotaView},
     },
     error::AppError,
-    forecast,
-    quota_trend,
+    forecast, quota_trend,
     sessions::service::SessionService,
     storage::repository::AccountRepository,
 };

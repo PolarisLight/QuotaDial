@@ -787,7 +787,11 @@ mod tests {
             "guardian.jsonl",
         );
 
-        let session = repository.local_session_view(2_000).unwrap().sessions.remove(0);
+        let session = repository
+            .local_session_view(2_000)
+            .unwrap()
+            .sessions
+            .remove(0);
         assert!(session.equivalent_cost_usd.unwrap() > 0.0);
         assert_eq!(session.priced_tokens, 1_200);
         assert_eq!(session.unpriced_tokens, 350);
