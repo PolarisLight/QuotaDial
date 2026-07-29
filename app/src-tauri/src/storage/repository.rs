@@ -317,19 +317,33 @@ impl AccountRepository {
             if event.session_id != group.root_id {
                 group.child_ids.insert(event.session_id.clone());
             }
-            if let Some(model) = event.model.as_ref() {
-                *group.model_weights.entry(model.clone()).or_default() += event.tokens.total();
+            let event_tokens = event.tokens.total();
+            if let Some(model) = event.model.as_deref() {
+                if !is_internal_review_model(model) {
+                    *group.model_weights.entry(model.to_owned()).or_default() += event_tokens;
+                }
                 match catalog.estimate(model, event.occurred_at, &event.tokens) {
-                    Some(cost) => group.cost_usd += cost,
-                    None => group.has_unknown_cost = true,
+                    Some(cost) => {
+                        group.cost_usd += cost;
+                        group.priced_tokens += event_tokens;
+                    }
+                    None => group.unpriced_tokens += event_tokens,
                 }
             } else {
-                group.has_unknown_cost = true;
+                group.unpriced_tokens += event_tokens;
             }
         }
 
         let mut sessions = groups
             .into_values()
+            .filter(|group| {
+                let orphan_internal_review = group.model_weights.is_empty()
+                    && metadata
+                        .get(&group.root_id)
+                        .and_then(|item| item.model.as_deref())
+                        .is_some_and(is_internal_review_model);
+                !orphan_internal_review
+            })
             .map(|group| {
                 let root_metadata = metadata.get(&group.root_id);
                 let project_path = root_metadata.and_then(|item| item.cwd.clone());
@@ -341,6 +355,7 @@ impl AccountRepository {
                     .into_iter()
                     .max_by_key(|(_, weight)| *weight)
                     .map(|(model, _)| model);
+                let has_known_cost = group.priced_tokens > 0 || group.tokens.total() == 0;
                 SessionSummary {
                     session_id: group.root_id,
                     title: session_title(project_path.as_deref(), started_at),
@@ -348,7 +363,9 @@ impl AccountRepository {
                     last_active_at: group.last_active_at,
                     primary_model,
                     tokens: group.tokens,
-                    equivalent_cost_usd: (!group.has_unknown_cost).then_some(group.cost_usd),
+                    equivalent_cost_usd: has_known_cost.then_some(group.cost_usd),
+                    priced_tokens: group.priced_tokens,
+                    unpriced_tokens: group.unpriced_tokens,
                     child_session_count: group.child_ids.len() as i64,
                 }
             })
@@ -394,6 +411,7 @@ struct SessionMetadataRow {
     started_at: i64,
     last_active_at: i64,
     cwd: Option<String>,
+    model: Option<String>,
 }
 
 #[derive(Debug)]
@@ -411,7 +429,8 @@ struct SessionAccumulator {
     child_ids: HashSet<String>,
     model_weights: HashMap<String, i64>,
     cost_usd: f64,
-    has_unknown_cost: bool,
+    priced_tokens: i64,
+    unpriced_tokens: i64,
 }
 
 impl SessionAccumulator {
@@ -423,7 +442,8 @@ impl SessionAccumulator {
             child_ids: HashSet::new(),
             model_weights: HashMap::new(),
             cost_usd: 0.0,
-            has_unknown_cost: false,
+            priced_tokens: 0,
+            unpriced_tokens: 0,
         }
     }
 }
@@ -432,7 +452,7 @@ fn load_session_metadata(
     connection: &Connection,
 ) -> Result<HashMap<String, SessionMetadataRow>, AppError> {
     let mut statement = connection.prepare(
-        "SELECT session_id, parent_session_id, started_at, last_active_at, cwd
+        "SELECT session_id, parent_session_id, started_at, last_active_at, cwd, model
          FROM session_metadata",
     )?;
     let rows = statement.query_map([], |row| {
@@ -443,6 +463,7 @@ fn load_session_metadata(
                 started_at: row.get(2)?,
                 last_active_at: row.get(3)?,
                 cwd: row.get(4)?,
+                model: row.get(5)?,
             },
         ))
     })?;
@@ -470,6 +491,10 @@ fn load_session_events(connection: &Connection) -> Result<Vec<SessionEventRow>, 
         })
     })?;
     rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
+}
+
+fn is_internal_review_model(model: &str) -> bool {
+    matches!(model, "codex-auto-review")
 }
 
 fn resolve_root(session_id: &str, parents: &HashMap<String, Option<String>>) -> String {
@@ -724,5 +749,63 @@ mod tests {
         let after = repository.local_session_view(2_000).unwrap();
         assert_eq!(after.sessions.len(), 1);
         assert_eq!(after.sessions[0].session_id, "root-1");
+    }
+
+    #[test]
+    fn review_usage_is_merged_but_never_becomes_the_primary_model() {
+        let repository = AccountRepository::open_in_memory().unwrap();
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/priced-root.jsonl"),
+            "priced-root.jsonl",
+        );
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/guardian.jsonl"),
+            "guardian.jsonl",
+        );
+
+        let sessions = repository.local_session_view(2_000).unwrap().sessions;
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].session_id, "root-1");
+        assert_eq!(sessions[0].primary_model.as_deref(), Some("gpt-5.5"));
+        assert_eq!(sessions[0].unpriced_tokens, 350);
+        assert!(sessions[0].equivalent_cost_usd.is_some());
+    }
+
+    #[test]
+    fn partial_pricing_keeps_the_known_cost() {
+        let repository = AccountRepository::open_in_memory().unwrap();
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/priced-root.jsonl"),
+            "priced-root.jsonl",
+        );
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/guardian.jsonl"),
+            "guardian.jsonl",
+        );
+
+        let session = repository.local_session_view(2_000).unwrap().sessions.remove(0);
+        assert!(session.equivalent_cost_usd.unwrap() > 0.0);
+        assert_eq!(session.priced_tokens, 1_200);
+        assert_eq!(session.unpriced_tokens, 350);
+    }
+
+    #[test]
+    fn orphan_internal_review_session_is_not_visible() {
+        let repository = AccountRepository::open_in_memory().unwrap();
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/guardian.jsonl"),
+            "guardian.jsonl",
+        );
+
+        assert!(repository
+            .local_session_view(2_000)
+            .unwrap()
+            .sessions
+            .is_empty());
     }
 }

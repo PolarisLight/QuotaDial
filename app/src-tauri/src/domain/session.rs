@@ -23,6 +23,8 @@ pub struct SessionSummary {
     pub primary_model: Option<String>,
     pub tokens: TokenBreakdown,
     pub equivalent_cost_usd: Option<f64>,
+    pub priced_tokens: i64,
+    pub unpriced_tokens: i64,
     pub child_session_count: i64,
 }
 
