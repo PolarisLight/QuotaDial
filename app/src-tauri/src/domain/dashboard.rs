@@ -1,4 +1,5 @@
 use super::account::{AccountUsageResult, DailyUsageBucket};
+use super::session::LocalSessionView;
 use crate::forecast::ExhaustionForecast;
 
 #[derive(Debug, Clone, serde::Serialize, PartialEq)]
@@ -44,7 +45,7 @@ pub struct DashboardSnapshot {
     pub other_quotas: Vec<QuotaView>,
     pub account_usage: Option<AccountUsageView>,
     pub forecast: Option<ExhaustionForecast>,
-    pub session_details_available: bool,
+    pub local_sessions: LocalSessionView,
 }
 
 impl Default for DashboardSnapshot {
@@ -58,7 +59,7 @@ impl Default for DashboardSnapshot {
             other_quotas: Vec::new(),
             account_usage: None,
             forecast: None,
-            session_details_available: false,
+            local_sessions: LocalSessionView::default(),
         }
     }
 }

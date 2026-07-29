@@ -9,6 +9,7 @@ use crate::{
     },
     error::AppError,
     forecast,
+    sessions::service::SessionService,
     storage::repository::AccountRepository,
 };
 use async_trait::async_trait;
@@ -144,17 +145,35 @@ pub struct AccountMonitor {
     snapshot: watch::Sender<DashboardSnapshot>,
     refresh_lock: Mutex<()>,
     clock: Arc<dyn Clock>,
+    sessions: Arc<SessionService>,
 }
 
 impl AccountMonitor {
-    pub fn new(source: Arc<dyn AccountSource>, repository: Arc<AccountRepository>) -> Self {
-        Self::new_with_clock(source, repository, Arc::new(SystemClock))
+    pub fn new(
+        source: Arc<dyn AccountSource>,
+        repository: Arc<AccountRepository>,
+        sessions: Arc<SessionService>,
+    ) -> Self {
+        Self::new_with_clock_and_sessions(source, repository, Arc::new(SystemClock), sessions)
     }
 
     pub fn new_with_clock(
         source: Arc<dyn AccountSource>,
         repository: Arc<AccountRepository>,
         clock: Arc<dyn Clock>,
+    ) -> Self {
+        let sessions = Arc::new(SessionService::new(
+            repository.clone(),
+            std::path::PathBuf::from("__codex_monitor_tests_no_sessions__"),
+        ));
+        Self::new_with_clock_and_sessions(source, repository, clock, sessions)
+    }
+
+    pub fn new_with_clock_and_sessions(
+        source: Arc<dyn AccountSource>,
+        repository: Arc<AccountRepository>,
+        clock: Arc<dyn Clock>,
+        sessions: Arc<SessionService>,
     ) -> Self {
         let (snapshot, _) = watch::channel(DashboardSnapshot::default());
         Self {
@@ -163,6 +182,7 @@ impl AccountMonitor {
             snapshot,
             refresh_lock: Mutex::new(()),
             clock,
+            sessions,
         }
     }
 
@@ -172,6 +192,12 @@ impl AccountMonitor {
 
     pub fn subscribe(&self) -> watch::Receiver<DashboardSnapshot> {
         self.snapshot.subscribe()
+    }
+
+    pub fn apply_local_sessions(&self, local_sessions: crate::domain::session::LocalSessionView) {
+        let mut snapshot = self.snapshot();
+        snapshot.local_sessions = local_sessions;
+        self.snapshot.send_replace(snapshot);
     }
 
     pub async fn refresh(&self) -> Result<DashboardSnapshot, AppError> {
@@ -217,7 +243,7 @@ impl AccountMonitor {
             other_quotas,
             account_usage,
             forecast,
-            session_details_available: false,
+            local_sessions: self.sessions.snapshot(),
         };
         self.snapshot.send_replace(snapshot.clone());
         Ok(snapshot)
