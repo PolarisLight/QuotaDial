@@ -520,6 +520,13 @@ h2 {
 .sessions-panel {
   margin-top: 16px;
   padding: 22px 23px;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.sessions-panel.section-focused {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--line));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent),
+    var(--shadow-panel);
 }
 
 .session-scan-time {

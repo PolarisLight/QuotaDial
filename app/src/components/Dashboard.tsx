@@ -1,5 +1,7 @@
 import { ArrowClockwise, CloudSlash, WarningCircle } from "@phosphor-icons/react";
+import { useEffect } from "react";
 import { useDashboard } from "../hooks/useDashboard";
+import { backend } from "../lib/backend";
 import type { DashboardSnapshot } from "../types/dashboard";
 import { AppSidebar } from "./AppSidebar";
 import { QuotaCard } from "./QuotaCard";
@@ -126,6 +128,24 @@ function ConnectionError({
 
 export function Dashboard() {
   const dashboard = useDashboard();
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void backend.onFocusSection(section => focusDashboardSection(section)).then(
+      dispose => {
+        if (active) {
+          unlisten = dispose;
+        } else {
+          dispose();
+        }
+      },
+    );
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, []);
+
   return (
     <DashboardView
       snapshot={dashboard.snapshot}
@@ -135,4 +155,14 @@ export function Dashboard() {
       onRefresh={() => void dashboard.refresh()}
     />
   );
+}
+
+export function focusDashboardSection(section: string) {
+  const target = document.querySelector<HTMLElement>(
+    `[data-section="${section}"]`,
+  );
+  if (!target) return;
+  target.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  target.classList.add("section-focused");
+  window.setTimeout(() => target.classList.remove("section-focused"), 1_400);
 }

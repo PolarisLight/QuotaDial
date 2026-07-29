@@ -121,4 +121,12 @@ export const backend = {
       handler(event.payload),
     );
   },
+  onFocusSection: (handler: (section: string) => void): Promise<UnlistenFn> => {
+    if (isWebPreview()) {
+      return Promise.resolve(() => undefined);
+    }
+    return listen<string>("dashboard://focus-section", event =>
+      handler(event.payload),
+    );
+  },
 };

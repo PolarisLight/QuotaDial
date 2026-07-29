@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import type { DashboardSnapshot } from "../types/dashboard";
-import { DashboardView } from "./Dashboard";
+import { DashboardView, focusDashboardSection } from "./Dashboard";
 
 const snapshot: DashboardSnapshot = {
   observedAt: 1_785_330_000,
@@ -253,5 +253,20 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("无法读取本机会话记录")).toBeVisible();
     expect(screen.getByRole("button", { name: "重新扫描" })).toBeVisible();
+  });
+
+  test("focuses the session section requested by the menu bar", () => {
+    vi.useFakeTimers();
+    renderDashboard();
+    const section = screen
+      .getByRole("heading", { name: "会话详情" })
+      .closest("section")!;
+
+    focusDashboardSection("sessions");
+
+    expect(section).toHaveClass("section-focused");
+    vi.runAllTimers();
+    expect(section).not.toHaveClass("section-focused");
+    vi.useRealTimers();
   });
 });

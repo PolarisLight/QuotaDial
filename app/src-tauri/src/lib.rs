@@ -41,7 +41,7 @@ pub fn run() {
             let sessions = Arc::new(SessionService::new(repository.clone(), codex_home()?));
             let monitor = Arc::new(AccountMonitor::new(source, repository, sessions.clone()));
             let (shutdown, _) = tokio::sync::watch::channel(false);
-            let _tray = tray::build(app.handle(), monitor.clone())?;
+            let _tray = tray::build(app.handle(), monitor.clone(), sessions.clone())?;
 
             let monitor_task = monitor.clone();
             tauri::async_runtime::spawn(monitor_task.run(shutdown.subscribe()));
