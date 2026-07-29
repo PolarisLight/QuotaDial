@@ -30,6 +30,8 @@ const snapshot: DashboardSnapshot = {
   otherQuotas: [],
   accountUsage: null,
   forecast: null,
+  quotaHistory: [],
+  quotaPace: null,
   localSessions: {
     sessions: [],
     diagnostics: {

@@ -41,6 +41,42 @@ const snapshot: DashboardSnapshot = {
     sampleCount: 6,
     spanSeconds: 10_800,
   },
+  quotaHistory: [
+    {
+      observedAt: new Date(2026, 6, 23, 12).getTime() / 1_000,
+      remainingPercent: 100,
+    },
+    {
+      observedAt: new Date(2026, 6, 24, 12).getTime() / 1_000,
+      remainingPercent: 96,
+    },
+    {
+      observedAt: new Date(2026, 6, 25, 12).getTime() / 1_000,
+      remainingPercent: 92,
+    },
+    {
+      observedAt: new Date(2026, 6, 26, 12).getTime() / 1_000,
+      remainingPercent: 89,
+    },
+    {
+      observedAt: new Date(2026, 6, 27, 12).getTime() / 1_000,
+      remainingPercent: 86,
+    },
+    {
+      observedAt: new Date(2026, 6, 28, 12).getTime() / 1_000,
+      remainingPercent: 84,
+    },
+    {
+      observedAt: new Date(2026, 6, 29, 12).getTime() / 1_000,
+      remainingPercent: 82,
+    },
+  ],
+  quotaPace: {
+    percentPerDay: 15,
+    idealPercentPerDay: 14.2857,
+    status: "normal",
+    sampleCount: 7,
+  },
   localSessions: {
     sessions: [],
     diagnostics: {
@@ -172,9 +208,22 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(container.querySelectorAll(".token-column")).toHaveLength(7);
+    expect(container.querySelectorAll(".token-bar")).toHaveLength(7);
     expect(screen.queryByText("07/18")).not.toBeInTheDocument();
     expect(screen.getByText("07/29")).toBeVisible();
+  });
+
+  test("combines daily tokens and remaining quota in the existing usage panel", () => {
+    renderDashboard();
+
+    expect(
+      screen.getByRole("heading", { name: "Token 与额度趋势" }),
+    ).toBeVisible();
+    expect(document.querySelectorAll(".usage-panel")).toHaveLength(1);
+    expect(
+      document.querySelector('[data-testid="remaining-quota-line"]'),
+    ).toBeInTheDocument();
+    expect(screen.getByText("剩余额度")).toBeVisible();
   });
 
   test("fills the quota bar left to right using consumed percentage", () => {

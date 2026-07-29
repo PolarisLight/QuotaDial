@@ -31,6 +31,20 @@ export interface ExhaustionForecast {
   spanSeconds: number;
 }
 
+export type QuotaPaceStatus = "slow" | "normal" | "fast";
+
+export interface QuotaHistoryPoint {
+  observedAt: number;
+  remainingPercent: number;
+}
+
+export interface QuotaPace {
+  percentPerDay: number;
+  idealPercentPerDay: number;
+  status: QuotaPaceStatus;
+  sampleCount: number;
+}
+
 export interface TokenBreakdown {
   inputTokens: number;
   cachedInputTokens: number;
@@ -72,5 +86,7 @@ export interface DashboardSnapshot {
   otherQuotas: QuotaView[];
   accountUsage: AccountUsageView | null;
   forecast: ExhaustionForecast | null;
+  quotaHistory: QuotaHistoryPoint[];
+  quotaPace: QuotaPace | null;
   localSessions: LocalSessionView;
 }

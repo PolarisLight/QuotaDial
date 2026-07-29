@@ -85,6 +85,9 @@ export function DashboardView({
                 usage={snapshot.accountUsage}
                 usageError={snapshot.accountUsageError}
                 forecast={snapshot.forecast}
+                history={snapshot.quotaHistory}
+                pace={snapshot.quotaPace}
+                quota={snapshot.primaryQuota}
               />
             </section>
             <SessionDetails view={snapshot.localSessions} />

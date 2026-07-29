@@ -39,6 +39,42 @@ const previewSnapshot: DashboardSnapshot = {
     sampleCount: 6,
     spanSeconds: 10_800,
   },
+  quotaHistory: [
+    {
+      observedAt: new Date(2026, 6, 23, 12).getTime() / 1_000,
+      remainingPercent: 100,
+    },
+    {
+      observedAt: new Date(2026, 6, 24, 12).getTime() / 1_000,
+      remainingPercent: 96,
+    },
+    {
+      observedAt: new Date(2026, 6, 25, 12).getTime() / 1_000,
+      remainingPercent: 92,
+    },
+    {
+      observedAt: new Date(2026, 6, 26, 12).getTime() / 1_000,
+      remainingPercent: 89,
+    },
+    {
+      observedAt: new Date(2026, 6, 27, 12).getTime() / 1_000,
+      remainingPercent: 86,
+    },
+    {
+      observedAt: new Date(2026, 6, 28, 12).getTime() / 1_000,
+      remainingPercent: 84,
+    },
+    {
+      observedAt: new Date(2026, 6, 29, 12).getTime() / 1_000,
+      remainingPercent: 82,
+    },
+  ],
+  quotaPace: {
+    percentPerDay: 15,
+    idealPercentPerDay: 14.2857,
+    status: "normal",
+    sampleCount: 7,
+  },
   localSessions: {
     sessions: [
       {

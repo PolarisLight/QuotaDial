@@ -2,12 +2,19 @@ import { ChartLineUp, CurrencyDollar, Gauge } from "@phosphor-icons/react";
 import type {
   AccountUsageView,
   ExhaustionForecast,
+  QuotaHistoryPoint,
+  QuotaPace,
+  QuotaView,
 } from "../types/dashboard";
+import { UsageQuotaChart } from "./UsageQuotaChart";
 
 interface UsageForecastPanelProps {
   usage: AccountUsageView | null;
   usageError: string | null;
   forecast: ExhaustionForecast | null;
+  history: QuotaHistoryPoint[];
+  pace: QuotaPace | null;
+  quota: QuotaView | null;
 }
 
 const tokenFormatter = new Intl.NumberFormat("zh-CN", {
@@ -51,10 +58,12 @@ export function UsageForecastPanel({
   usage,
   usageError,
   forecast,
+  history,
+  pace,
+  quota,
 }: UsageForecastPanelProps) {
   const copy = forecastCopy(forecast);
   const buckets = usage?.dailyUsageBuckets.slice(-7) ?? [];
-  const maxTokens = Math.max(...buckets.map(bucket => bucket.tokens), 1);
   const today = buckets.at(-1)?.tokens ?? null;
 
   return (
@@ -62,7 +71,7 @@ export function UsageForecastPanel({
       <div className="panel-heading">
         <div>
           <span className="eyebrow">消耗与预测</span>
-          <h2 id="usage-heading">Token 趋势</h2>
+          <h2 id="usage-heading">Token 与额度趋势</h2>
         </div>
         <span className="scope-pill">所有设备</span>
       </div>
@@ -84,18 +93,12 @@ export function UsageForecastPanel({
             </div>
           </div>
 
-          <div className="token-chart" aria-label="最近 7 日 Token">
-            {buckets.map(bucket => (
-              <div className="token-column" key={bucket.startDate}>
-                <span
-                  className="token-bar"
-                  style={{ height: `${Math.max(8, (bucket.tokens / maxTokens) * 100)}%` }}
-                  title={`${bucket.startDate}: ${bucket.tokens.toLocaleString("zh-CN")} Token`}
-                />
-                <small>{bucket.startDate.slice(5).replace("-", "/")}</small>
-              </div>
-            ))}
-          </div>
+          <UsageQuotaChart
+            buckets={buckets}
+            history={history}
+            pace={pace}
+            quota={quota}
+          />
         </>
       ) : (
         <div className="inline-empty">
