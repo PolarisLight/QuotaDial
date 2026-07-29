@@ -583,30 +583,67 @@ h2 {
 }
 
 .session-table-wrap {
+  max-height: 320px;
   margin-top: 16px;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   border: 1px solid var(--line);
   border-radius: 13px;
 }
 
 .session-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 10px;
 }
 
 .session-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 10px 12px;
   color: var(--subtle);
-  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+  background: var(--surface-raised);
   font-size: 9px;
   font-weight: 600;
   text-align: left;
 }
 
+.session-table th:nth-child(2) {
+  width: 112px;
+}
+
+.session-table th:nth-child(3) {
+  width: 104px;
+}
+
+.session-table th:nth-child(4) {
+  width: 88px;
+}
+
+.session-table th:nth-child(5) {
+  width: 104px;
+}
+
+.session-table th:nth-child(6) {
+  width: 116px;
+}
+
+.session-table th:nth-child(4),
+.session-table th:nth-child(5),
+.session-table td:nth-child(4),
+.session-table td:nth-child(5) {
+  text-align: right;
+}
+
 .session-table td {
+  min-width: 0;
+  overflow: hidden;
   padding: 11px 12px;
   border-top: 1px solid var(--line);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -616,6 +653,8 @@ h2 {
 
 .session-title-button {
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   gap: 8px;
   padding: 0;
@@ -624,6 +663,10 @@ h2 {
   background: transparent;
   border: 0;
   text-align: left;
+}
+
+.session-title-button > span {
+  min-width: 0;
 }
 
 .session-title-button svg {
@@ -642,7 +685,7 @@ h2 {
 }
 
 .session-title-button strong {
-  max-width: 230px;
+  max-width: none;
   overflow: hidden;
   font-size: 11px;
   text-overflow: ellipsis;
