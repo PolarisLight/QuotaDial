@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 44 44">
+  <rect id="tile" width="44" height="44" rx="11" fill="#19332c"/>
+  <g id="quota-dial">
+    <path id="total-track" d="M22 5.5 36.5 14v16L22 38.5 7.5 30V14Z"
+          pathLength="100" fill="none" stroke="#f6f5ed" stroke-width="4.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="used-track" d="M22 5.5 36.5 14v16L22 38.5 7.5 30V14Z"
+          pathLength="100" fill="none" stroke="#70d5a5" stroke-width="4.4"
+          stroke-dasharray="64 36" stroke-linecap="round" stroke-linejoin="round"/>
+    <g id="ticks" fill="none" stroke="#19332c" stroke-width="1.35"
+       stroke-linecap="round">
+      <path d="M22 5.5v4.8"/><path d="M36.5 14l-4.2 2.4"/>
+      <path d="M36.5 30l-4.2-2.4"/><path d="M22 38.5v-4.8"/>
+      <path d="M7.5 30l4.2-2.4"/><path d="M7.5 14l4.2 2.4"/>
+    </g>
+    <path id="hand" d="M24.5 20 13.1 29.3" fill="none" stroke="#f6f5ed"
+          stroke-width="2.25" stroke-linecap="round"/>
+    <circle id="hub" cx="22" cy="22" r="2.25" fill="#f6f5ed"/>
+    <circle id="hub-core" cx="22" cy="22" r=".95" fill="#19332c"/>
+  </g>
+</svg>

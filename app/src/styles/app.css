@@ -77,20 +77,43 @@ button:focus-visible {
   height: 100%;
 }
 
-.brand-mark__frame {
+.brand-mark__track,
+.brand-mark__used {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4.4;
+}
+
+.brand-mark__track {
+  stroke: #f6f5ed;
+}
+
+.brand-mark__used {
+  stroke: #70d5a5;
+  stroke-dasharray: 64 36;
+}
+
+.brand-mark__tick {
+  fill: none;
+  stroke: #1b3029;
+  stroke-linecap: round;
+  stroke-width: 1.35;
+}
+
+.brand-mark__hand {
+  fill: none;
+  stroke: #f6f5ed;
+  stroke-linecap: round;
+  stroke-width: 2.25;
+}
+
+.brand-mark__hub {
   fill: #f6f5ed;
 }
 
-.brand-mark__well {
+.brand-mark__hub-core {
   fill: #1b3029;
-}
-
-.brand-mark__level {
-  fill: #70d5a5;
-}
-
-.brand-mark__glint {
-  fill: #f6f5ed;
 }
 
 .brand strong,

@@ -2,22 +2,40 @@ type BrandMarkProps = {
   className?: string;
 };
 
+const ticks = [
+  "M22 5.5v4.8",
+  "M36.5 14l-4.2 2.4",
+  "M36.5 30l-4.2-2.4",
+  "M22 38.5v-4.8",
+  "M7.5 30l4.2-2.4",
+  "M7.5 14l4.2 2.4",
+];
+
 export function BrandMark({ className }: BrandMarkProps) {
   return (
     <svg
-      aria-label="Codex Monitor 余量窗口"
+      aria-label="Codex Monitor 额度表盘"
       className={className}
       role="img"
       viewBox="0 0 44 44"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect className="brand-mark__frame" x="5" y="5" width="34" height="34" rx="9" />
-      <rect className="brand-mark__well" x="9" y="9" width="26" height="26" rx="6" />
       <path
-        className="brand-mark__level"
-        d="M9 25.3c4.1 0 5.9-4.2 9.9-4.2 4.1 0 5.8 4.1 9.9 4.1 2.5 0 4.4-.9 6.2-2.2v6a6 6 0 0 1-6 6H15a6 6 0 0 1-6-6v-3.7Z"
+        className="brand-mark__track"
+        d="M22 5.5 36.5 14v16L22 38.5 7.5 30V14Z"
+        pathLength="100"
       />
-      <circle className="brand-mark__glint" cx="30.5" cy="13.5" r="1.7" />
+      <path
+        className="brand-mark__used"
+        d="M22 5.5 36.5 14v16L22 38.5 7.5 30V14Z"
+        pathLength="100"
+      />
+      {ticks.map((path) => (
+        <path className="brand-mark__tick" d={path} key={path} />
+      ))}
+      <path className="brand-mark__hand" d="M24.5 20 13.1 29.3" />
+      <circle className="brand-mark__hub" cx="22" cy="22" r="2.25" />
+      <circle className="brand-mark__hub-core" cx="22" cy="22" r=".95" />
     </svg>
   );
 }

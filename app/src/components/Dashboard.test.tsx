@@ -66,10 +66,10 @@ function renderDashboard(value = snapshot, onRefresh = vi.fn()) {
 }
 
 describe("Dashboard", () => {
-  test("uses the remaining-window brand instead of a waveform", () => {
+  test("uses the quota-dial brand instead of a waveform", () => {
     renderDashboard();
 
-    expect(screen.getByLabelText("Codex Monitor 余量窗口")).toBeVisible();
+    expect(screen.getByLabelText("Codex Monitor 额度表盘")).toBeVisible();
     expect(screen.queryByTestId("waveform-brand")).not.toBeInTheDocument();
   });
 
