@@ -4,6 +4,7 @@ pub mod domain;
 pub mod error;
 pub mod forecast;
 pub mod monitor;
+pub mod sessions;
 pub mod storage;
 pub mod tray;
 
