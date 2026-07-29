@@ -111,4 +111,28 @@ describe("UsageQuotaChart", () => {
     );
     expect(screen.getByText("过快 · 18.0%/天")).toBeVisible();
   });
+
+  test("keeps the reset calendar day as the first label and token bar", () => {
+    const resetStart = new Date(2026, 6, 29, 20).getTime() / 1_000;
+    const { container } = render(
+      <UsageQuotaChart
+        buckets={[{ startDate: "2026-07-29", tokens: 123_000 }]}
+        history={[
+          { observedAt: resetStart + 3_600, remainingPercent: 98 },
+          { observedAt: resetStart + 7_200, remainingPercent: 96 },
+        ]}
+        pace={null}
+        quota={{
+          ...quota,
+          resetsAt: resetStart + 7 * day,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("07/29")).toBeVisible();
+    expect(container.querySelectorAll(".token-bar")).toHaveLength(1);
+    expect(
+      container.querySelector(".token-bar title")?.textContent,
+    ).toContain("2026-07-29");
+  });
 });

@@ -29,15 +29,20 @@ function nextLocalMidnight(date: string) {
   return new Date(year, month - 1, day + 1).getTime() / 1_000;
 }
 
-function bucketMidpoint(date: string) {
-  return (localMidnight(date) + nextLocalMidnight(date)) / 2;
-}
-
 function shortDate(timestamp: number) {
   const date = new Date(timestamp * 1_000);
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(
     date.getDate(),
   ).padStart(2, "0")}`;
+}
+
+function localDateKey(timestamp: number) {
+  const date = new Date(timestamp * 1_000);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function clampPercent(value: number) {
@@ -107,14 +112,13 @@ export function UsageQuotaChart({
     quota && rangeStart !== null && rangeSeconds > 0
       ? Array.from({ length: 7 }, (_, index) => {
           const start = rangeStart + (rangeSeconds * index) / 7;
-          const end = rangeStart + (rangeSeconds * (index + 1)) / 7;
-          const matching = buckets.filter(bucket => {
-            const midpoint = bucketMidpoint(bucket.startDate);
-            return midpoint >= start && midpoint < end;
-          });
+          const slotDate = localDateKey(start);
+          const matching = buckets.filter(
+            bucket => bucket.startDate === slotDate,
+          );
           return {
             key: `${start}`,
-            label: shortDate((start + end) / 2),
+            label: shortDate(start),
             tokens: matching.reduce((sum, bucket) => sum + bucket.tokens, 0),
             hasData: matching.length > 0,
             title:
