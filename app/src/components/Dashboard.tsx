@@ -24,9 +24,19 @@ export function DashboardView({
   onRefresh,
 }: DashboardViewProps) {
   return (
-    <div className="app-window">
+    <div
+      className="app-window"
+      style={{ width: "100vw", height: "100vh", margin: 0, overflow: "hidden" }}
+    >
       <AppSidebar />
-      <main className="content">
+      <main
+        className="content"
+        style={{
+          height: "100%",
+          overflowY: "auto",
+          overscrollBehaviorY: "none",
+        }}
+      >
         <header className="page-header">
           <div>
             <span className="eyebrow">Codex 使用情况</span>

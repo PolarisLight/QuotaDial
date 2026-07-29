@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
+import "../styles/app.css";
 import type { DashboardSnapshot } from "../types/dashboard";
 import { DashboardView, focusDashboardSection } from "./Dashboard";
 
@@ -242,6 +243,63 @@ describe("Dashboard", () => {
     expect(container.querySelectorAll("tbody .session-row")).toHaveLength(1);
     expect(screen.getByText("含 1 个子任务")).toBeVisible();
     expect(screen.queryByText("根会话")).not.toBeInTheDocument();
+  });
+
+  test("shows only the eight most recent sessions", () => {
+    const sessions = Array.from({ length: 12 }, (_, index) => ({
+      sessionId: `session-${index}`,
+      title: `会话 ${index}`,
+      projectPath: `/tmp/project-${index}`,
+      lastActiveAt: 1_785_330_000 - index,
+      primaryModel: "gpt-5.6-sol",
+      tokens: {
+        inputTokens: 1_000,
+        cachedInputTokens: 400,
+        outputTokens: 200,
+        reasoningOutputTokens: 50,
+      },
+      equivalentCostUsd: 0.01,
+      childSessionCount: 0,
+    }));
+
+    const { container } = render(
+      <DashboardView
+        snapshot={{
+          ...snapshot,
+          localSessions: {
+            sessions,
+            diagnostics: {
+              scannedFiles: 12,
+              skippedLines: 0,
+              lastImportedAt: 1_785_330_000,
+              lastError: null,
+            },
+          },
+        }}
+        loading={false}
+        refreshing={false}
+        error={null}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelectorAll("tbody .session-row")).toHaveLength(8);
+    expect(screen.getByText("最近 8 个会话")).toBeVisible();
+    expect(screen.queryByText("会话 8")).not.toBeInTheDocument();
+  });
+
+  test("uses the native window as the only scroll boundary", () => {
+    renderDashboard();
+    const frame = document.querySelector(".app-window")!;
+    const content = document.querySelector(".content")!;
+
+    expect((frame as HTMLElement).style.width).toBe("100vw");
+    expect((frame as HTMLElement).style.height).toBe("100vh");
+    expect(frame).toHaveStyle({ margin: "0px", overflow: "hidden" });
+    expect(content).toHaveStyle({
+      overflowY: "auto",
+      overscrollBehaviorY: "none",
+    });
   });
 
   test("distinguishes import failure from a genuinely empty local history", () => {

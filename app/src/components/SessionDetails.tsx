@@ -16,6 +16,8 @@ interface SessionDetailsProps {
   view: LocalSessionView;
 }
 
+const SESSION_DISPLAY_LIMIT = 8;
+
 const compactNumber = new Intl.NumberFormat("zh-CN", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -48,6 +50,7 @@ function projectName(path: string | null) {
 export function SessionDetails({ view }: SessionDetailsProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
+  const visibleSessions = view.sessions.slice(0, SESSION_DISPLAY_LIMIT);
 
   const rescan = async () => {
     setRescanning(true);
@@ -69,9 +72,9 @@ export function SessionDetails({ view }: SessionDetailsProps) {
           <span className="eyebrow">本机记录</span>
           <h2 id="sessions-heading">会话详情</h2>
         </div>
-        {view.diagnostics.lastImportedAt && (
+        {view.sessions.length > 0 && (
           <span className="session-scan-time">
-            已扫描 {view.diagnostics.scannedFiles} 个文件
+            最近 {visibleSessions.length} 个会话
           </span>
         )}
       </div>
@@ -117,7 +120,7 @@ export function SessionDetails({ view }: SessionDetailsProps) {
               </tr>
             </thead>
             <tbody>
-              {view.sessions.map(session => (
+              {visibleSessions.map(session => (
                 <SessionRow
                   key={session.sessionId}
                   session={session}
