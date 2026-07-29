@@ -2,6 +2,7 @@ use super::migrations;
 use crate::{
     domain::account::{AccountUsageResult, RateLimitsResult, RateWindow},
     error::AppError,
+    sessions::parser::{ParsedFile, ParsedSessionMetadata},
 };
 use rusqlite::{params, Connection, OptionalExtension};
 use std::{
@@ -17,6 +18,20 @@ pub struct RateObservation {
     pub used_percent: f64,
     pub window_duration_mins: i64,
     pub resets_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceFileState {
+    pub path: String,
+    pub generation: i64,
+    pub file_identity: Option<String>,
+    pub byte_offset: i64,
+    pub observed_size: i64,
+    pub modified_at: i64,
+    pub parser_version: i64,
+    pub session_id: Option<String>,
+    pub current_model: Option<String>,
+    pub last_error: Option<String>,
 }
 
 pub struct AccountRepository {
@@ -150,11 +165,150 @@ impl AccountRepository {
         rows.collect::<Result<Vec<_>, _>>().map_err(AppError::from)
     }
 
+    pub fn latest_source_state(&self, path: &str) -> Result<Option<SourceFileState>, AppError> {
+        self.lock()?
+            .query_row(
+                "SELECT path, generation, file_identity, byte_offset, observed_size,
+                        modified_at, parser_version, session_id, current_model, last_error
+                 FROM session_source_files
+                 WHERE path = ?1
+                 ORDER BY generation DESC
+                 LIMIT 1",
+                [path],
+                |row| {
+                    Ok(SourceFileState {
+                        path: row.get(0)?,
+                        generation: row.get(1)?,
+                        file_identity: row.get(2)?,
+                        byte_offset: row.get(3)?,
+                        observed_size: row.get(4)?,
+                        modified_at: row.get(5)?,
+                        parser_version: row.get(6)?,
+                        session_id: row.get(7)?,
+                        current_model: row.get(8)?,
+                        last_error: row.get(9)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(AppError::from)
+    }
+
+    pub fn import_session_file(
+        &self,
+        state: &SourceFileState,
+        parsed: &ParsedFile,
+    ) -> Result<i64, AppError> {
+        let mut connection = self.lock()?;
+        let transaction = connection.transaction()?;
+        if let Some(metadata) = parsed.metadata.as_ref() {
+            upsert_session_metadata(&transaction, metadata)?;
+        }
+
+        let mut inserted = 0_i64;
+        for event in &parsed.events {
+            inserted += transaction.execute(
+                "INSERT OR IGNORE INTO session_usage_events(
+                    fingerprint, session_id, occurred_at, model,
+                    input_tokens, cached_input_tokens, output_tokens,
+                    reasoning_output_tokens, source_path, source_offset
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![
+                    event.fingerprint,
+                    event.session_id,
+                    event.occurred_at,
+                    event.model,
+                    event.tokens.input_tokens,
+                    event.tokens.cached_input_tokens,
+                    event.tokens.output_tokens,
+                    event.tokens.reasoning_output_tokens,
+                    event.source_path,
+                    event.source_offset as i64,
+                ],
+            )? as i64;
+        }
+
+        transaction.execute(
+            "INSERT INTO session_source_files(
+                path, generation, file_identity, byte_offset, observed_size,
+                modified_at, parser_version, session_id, current_model, last_error
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(path, generation) DO UPDATE SET
+                file_identity = excluded.file_identity,
+                byte_offset = excluded.byte_offset,
+                observed_size = excluded.observed_size,
+                modified_at = excluded.modified_at,
+                parser_version = excluded.parser_version,
+                session_id = excluded.session_id,
+                current_model = excluded.current_model,
+                last_error = excluded.last_error",
+            params![
+                state.path,
+                state.generation,
+                state.file_identity,
+                state.byte_offset,
+                state.observed_size,
+                state.modified_at,
+                state.parser_version,
+                state.session_id,
+                state.current_model,
+                state.last_error,
+            ],
+        )?;
+        transaction.commit()?;
+        Ok(inserted)
+    }
+
+    pub fn session_event_count(&self) -> Result<i64, AppError> {
+        self.lock()?
+            .query_row("SELECT COUNT(*) FROM session_usage_events", [], |row| {
+                row.get(0)
+            })
+            .map_err(AppError::from)
+    }
+
+    pub fn source_generation_count(&self) -> Result<i64, AppError> {
+        self.lock()?
+            .query_row("SELECT COUNT(*) FROM session_source_files", [], |row| {
+                row.get(0)
+            })
+            .map_err(AppError::from)
+    }
+
     fn lock(&self) -> Result<MutexGuard<'_, Connection>, AppError> {
         self.connection
             .lock()
             .map_err(|_| AppError::Unavailable("account database lock was poisoned".into()))
     }
+}
+
+fn upsert_session_metadata(
+    transaction: &rusqlite::Transaction<'_>,
+    metadata: &ParsedSessionMetadata,
+) -> Result<(), AppError> {
+    transaction.execute(
+        "INSERT INTO session_metadata(
+            session_id, parent_session_id, started_at, last_active_at,
+            cwd, model, source_path
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(session_id) DO UPDATE SET
+            parent_session_id = COALESCE(excluded.parent_session_id, parent_session_id),
+            started_at = MIN(started_at, excluded.started_at),
+            last_active_at = MAX(last_active_at, excluded.last_active_at),
+            cwd = COALESCE(excluded.cwd, cwd),
+            model = COALESCE(excluded.model, model),
+            source_path = excluded.source_path",
+        params![
+            metadata.session_id,
+            metadata.parent_session_id,
+            metadata.started_at,
+            metadata.last_active_at,
+            metadata.cwd,
+            metadata.model,
+            metadata.source_path,
+        ],
+    )?;
+    Ok(())
 }
 
 fn insert_rate_window(

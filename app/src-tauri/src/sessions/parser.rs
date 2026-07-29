@@ -35,6 +35,14 @@ pub struct ParsedFile {
     pub events: Vec<ParsedUsageEvent>,
     pub next_offset: u64,
     pub skipped_lines: i64,
+    pub current_session_id: Option<String>,
+    pub current_model: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ParseContext {
+    pub session_id: Option<String>,
+    pub current_model: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,9 +60,18 @@ struct Usage {
 }
 
 pub fn parse_reader(
+    reader: impl Read,
+    source_path: &str,
+    start_offset: u64,
+) -> Result<ParsedFile, AppError> {
+    parse_reader_with_context(reader, source_path, start_offset, ParseContext::default())
+}
+
+pub fn parse_reader_with_context(
     mut reader: impl Read,
     source_path: &str,
     start_offset: u64,
+    context: ParseContext,
 ) -> Result<ParsedFile, AppError> {
     let mut bytes = Vec::new();
     reader.read_to_end(&mut bytes)?;
@@ -62,7 +79,8 @@ pub fn parse_reader(
     let mut metadata: Option<ParsedSessionMetadata> = None;
     let mut events = Vec::new();
     let mut skipped_lines = 0;
-    let mut current_model: Option<String> = None;
+    let mut current_session_id = context.session_id;
+    let mut current_model = context.current_model;
     let mut consumed = 0_u64;
 
     for segment in bytes.split_inclusive(|byte| *byte == b'\n') {
@@ -115,6 +133,7 @@ pub fn parse_reader(
                         .and_then(Value::as_str)
                         .or_else(|| value.get("timestamp").and_then(Value::as_str)),
                 );
+                current_session_id = Some(session_id.to_owned());
                 metadata = Some(ParsedSessionMetadata {
                     session_id: session_id.to_owned(),
                     parent_session_id: payload
@@ -142,8 +161,7 @@ pub fn parse_reader(
             Some("event_msg")
                 if payload.get("type").and_then(Value::as_str) == Some("token_count") =>
             {
-                let Some(session_id) = metadata.as_ref().map(|item| item.session_id.as_str())
-                else {
+                let Some(session_id) = current_session_id.as_deref() else {
                     skipped_lines += 1;
                     continue;
                 };
@@ -196,6 +214,8 @@ pub fn parse_reader(
         events,
         next_offset: start_offset + consumed,
         skipped_lines,
+        current_session_id,
+        current_model,
     })
 }
 

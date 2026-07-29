@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS session_source_files (
   observed_size INTEGER NOT NULL DEFAULT 0,
   modified_at INTEGER NOT NULL DEFAULT 0,
   parser_version INTEGER NOT NULL,
+  session_id TEXT,
+  current_model TEXT,
   last_error TEXT,
   PRIMARY KEY(path, generation)
 );
