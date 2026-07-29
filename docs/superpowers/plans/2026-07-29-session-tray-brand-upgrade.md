@@ -1,6 +1,6 @@
 # Session Details, Menu Bar, and Brand Upgrade Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Import trustworthy local Codex session usage, roll child-agent usage into top-level sessions, expose it in the dashboard and menu bar, correct the quota progress semantics, and replace the Codex Pacer-like icon with the approved “remaining window” identity.
 
@@ -64,7 +64,7 @@
 - Modify: `app/src-tauri/src/storage/migrations.rs`
 - Test: `app/src-tauri/src/storage/migrations.rs`
 
-- [ ] **Step 1: Write a failing migration test**
+- [x] **Step 1: Write a failing migration test**
 
 Add a test that opens a database containing migration 1, inserts one account observation, runs
 the migration runner twice, and asserts both the old row and the session tables remain:
@@ -100,7 +100,7 @@ fn migration_two_is_idempotent_and_preserves_account_observations() {
 }
 ```
 
-- [ ] **Step 2: Run the migration test and verify RED**
+- [x] **Step 2: Run the migration test and verify RED**
 
 Run:
 
@@ -110,7 +110,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml storage::migrations::tests::
 
 Expected: FAIL because `session_usage_events` does not exist.
 
-- [ ] **Step 3: Define the session domain models**
+- [x] **Step 3: Define the session domain models**
 
 Create `domain/session.rs` with serialization matching the frontend:
 
@@ -162,7 +162,7 @@ pub struct LocalSessionView {
 
 Export it from `domain/mod.rs` with `pub mod session;`.
 
-- [ ] **Step 4: Add migration 2**
+- [x] **Step 4: Add migration 2**
 
 Create `002_sessions.sql` with these exact invariants:
 
@@ -242,7 +242,7 @@ for (version, sql) in MIGRATIONS {
 }
 ```
 
-- [ ] **Step 5: Run the migration test and all storage tests**
+- [x] **Step 5: Run the migration test and all storage tests**
 
 Run:
 
@@ -252,7 +252,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml storage::
 
 Expected: PASS with the new migration test and all existing repository tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src-tauri/src/domain app/src-tauri/src/storage/migrations.rs app/src-tauri/migrations/002_sessions.sql
@@ -271,7 +271,7 @@ git commit -m "feat: add local session storage model"
 - Modify: `app/src-tauri/src/lib.rs`
 - Test: `app/src-tauri/src/sessions/parser.rs`
 
-- [ ] **Step 1: Add parser dependencies**
+- [x] **Step 1: Add parser dependencies**
 
 Run:
 
@@ -283,7 +283,7 @@ cargo add --manifest-path src-tauri/Cargo.toml --dev tempfile
 
 Expected: `Cargo.toml` and `Cargo.lock` contain all four crates.
 
-- [ ] **Step 2: Create synthetic fixtures**
+- [x] **Step 2: Create synthetic fixtures**
 
 Use only invented text. `root.jsonl` must contain:
 
@@ -304,7 +304,7 @@ Use only invented text. `root.jsonl` must contain:
 `malformed.jsonl` starts with a broken JSON line and ends with the same valid root metadata and
 one valid token event.
 
-- [ ] **Step 3: Write failing parser tests**
+- [x] **Step 3: Write failing parser tests**
 
 Define the desired API in tests:
 
@@ -336,7 +336,7 @@ fn skips_a_bad_line_and_continues_at_the_next_complete_line() {
 }
 ```
 
-- [ ] **Step 4: Run parser tests and verify RED**
+- [x] **Step 4: Run parser tests and verify RED**
 
 Run:
 
@@ -346,7 +346,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml sessions::parser::tests
 
 Expected: FAIL because `parse_reader` and parser types do not exist.
 
-- [ ] **Step 5: Implement the minimal parser**
+- [x] **Step 5: Implement the minimal parser**
 
 Define private Serde structs only for `session_meta`, `turn_context`, and
 `event_msg.payload.type == "token_count"`. Parse `last_token_usage`, never infer billable usage
@@ -386,7 +386,7 @@ reasoning, `base_instructions`, summaries, or agent nicknames. The cumulative to
 only in the fingerprint so the same event remains stable after a file is moved to
 `archived_sessions`; it is never added to billable Token.
 
-- [ ] **Step 6: Run parser tests**
+- [x] **Step 6: Run parser tests**
 
 Run:
 
@@ -396,7 +396,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml sessions::parser::tests
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src-tauri/Cargo.toml app/src-tauri/Cargo.lock app/src-tauri/src/sessions app/src-tauri/src/lib.rs app/src-tauri/tests/fixtures/sessions
@@ -412,7 +412,7 @@ git commit -m "feat: parse local Codex session usage"
 - Modify: `app/src-tauri/src/storage/repository.rs`
 - Test: `app/src-tauri/src/sessions/importer.rs`
 
-- [ ] **Step 1: Write failing importer tests**
+- [x] **Step 1: Write failing importer tests**
 
 Use a temporary Codex home with `sessions/YYYY/MM/DD` and `archived_sessions`. Test the three
 critical behaviors:
@@ -458,7 +458,7 @@ fn truncation_starts_a_new_generation_but_replay_stays_idempotent() {
 }
 ```
 
-- [ ] **Step 2: Run importer tests and verify RED**
+- [x] **Step 2: Run importer tests and verify RED**
 
 Run:
 
@@ -468,7 +468,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml sessions::importer::tests
 
 Expected: FAIL because `SessionImporter` does not exist.
 
-- [ ] **Step 3: Implement discovery**
+- [x] **Step 3: Implement discovery**
 
 Expose:
 
@@ -489,7 +489,7 @@ pub fn discover_jsonl(codex_home: &Path) -> Result<Vec<PathBuf>, AppError>
 `archived_sessions`, normalizes paths, sorts them, and ignores symlinks that resolve outside
 the Codex home.
 
-- [ ] **Step 4: Add repository transaction methods**
+- [x] **Step 4: Add repository transaction methods**
 
 Add:
 
@@ -517,7 +517,7 @@ pub fn session_event_count(&self) -> Result<i64, AppError>;
 pub fn source_generation_count(&self) -> Result<i64, AppError>;
 ```
 
-- [ ] **Step 5: Implement reconciliation**
+- [x] **Step 5: Implement reconciliation**
 
 `SessionImporter::reconcile(now)` discovers files, compares size and file identity with the
 latest state, and either resumes from `byte_offset` or inserts generation `previous + 1` with
@@ -533,7 +533,7 @@ pub struct ImportReport {
 }
 ```
 
-- [ ] **Step 6: Run importer and storage tests**
+- [x] **Step 6: Run importer and storage tests**
 
 Run:
 
@@ -544,7 +544,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml storage::
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src-tauri/src/sessions app/src-tauri/src/storage/repository.rs
@@ -560,7 +560,7 @@ git commit -m "feat: import Codex session files idempotently"
 - Test: `app/src-tauri/src/sessions/pricing.rs`
 - Test: `app/src-tauri/src/storage/repository.rs`
 
-- [ ] **Step 1: Write failing lineage aggregation tests**
+- [x] **Step 1: Write failing lineage aggregation tests**
 
 Import `root.jsonl` and `child.jsonl`, then query summaries:
 
@@ -590,7 +590,7 @@ fn an_orphan_is_visible_until_its_parent_arrives() {
 }
 ```
 
-- [ ] **Step 2: Run aggregation tests and verify RED**
+- [x] **Step 2: Run aggregation tests and verify RED**
 
 Run:
 
@@ -600,7 +600,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml rolls_child_usage_into_one_t
 
 Expected: FAIL because `local_session_view` does not exist.
 
-- [ ] **Step 3: Implement root resolution and summary query**
+- [x] **Step 3: Implement root resolution and summary query**
 
 Load session metadata and events, resolve parent chains in memory with a visited set, and treat a
 cycle as an orphan instead of recursing forever. Group events by resolved root session ID, count
@@ -610,7 +610,7 @@ sort by `last_active_at DESC`.
 Do not subtract `total_token_usage`: each event row already represents `last_token_usage`, so
 inherited cumulative counters never enter the event table.
 
-- [ ] **Step 4: Write failing pricing tests**
+- [x] **Step 4: Write failing pricing tests**
 
 ```rust
 #[test]
@@ -639,7 +639,7 @@ fn unknown_models_return_no_cost() {
 }
 ```
 
-- [ ] **Step 5: Run pricing tests and verify RED**
+- [x] **Step 5: Run pricing tests and verify RED**
 
 Run:
 
@@ -649,7 +649,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml sessions::pricing::tests
 
 Expected: FAIL because `PriceCatalog` does not exist.
 
-- [ ] **Step 6: Implement versioned pricing**
+- [x] **Step 6: Implement versioned pricing**
 
 Implement a static catalog with explicit aliases and effective dates. Store prices in
 `model_price_versions` on startup. Compute:
@@ -665,7 +665,7 @@ Reasoning output is a subset of output for the Codex event format and must not b
 second time. Keep current public prices in one constant table with source URL and catalog version
 comments; updating values requires a separate tested catalog commit.
 
-- [ ] **Step 7: Run aggregation and pricing tests**
+- [x] **Step 7: Run aggregation and pricing tests**
 
 Run:
 
@@ -676,7 +676,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml storage::
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/src-tauri/src/sessions/pricing.rs app/src-tauri/src/sessions/importer.rs app/src-tauri/src/storage/repository.rs
@@ -695,7 +695,7 @@ git commit -m "feat: aggregate local session usage"
 - Test: `app/src-tauri/src/sessions/service.rs`
 - Test: `app/src-tauri/src/monitor.rs`
 
-- [ ] **Step 1: Write a failing service test**
+- [x] **Step 1: Write a failing service test**
 
 Use a paused Tokio clock and temporary Codex home:
 
@@ -713,7 +713,7 @@ async fn rescan_publishes_sessions_without_waiting_for_account_refresh() {
 }
 ```
 
-- [ ] **Step 2: Run the service test and verify RED**
+- [x] **Step 2: Run the service test and verify RED**
 
 Run:
 
@@ -723,7 +723,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml sessions::service::tests
 
 Expected: FAIL because `SessionService` does not exist.
 
-- [ ] **Step 3: Implement `SessionService`**
+- [x] **Step 3: Implement `SessionService`**
 
 Expose:
 
@@ -748,7 +748,7 @@ after changes below the two session directories, and performs a reconciliation s
 10 minutes. A failed scan updates `diagnostics.last_error` while retaining the last successful
 session rows.
 
-- [ ] **Step 4: Add sessions to `DashboardSnapshot`**
+- [x] **Step 4: Add sessions to `DashboardSnapshot`**
 
 Replace `session_details_available` with:
 
@@ -761,7 +761,7 @@ Update `Default`, all monitor tests, and `AccountMonitor` to hold an
 only `local_sessions` in the current dashboard snapshot and emits the new snapshot without
 waiting for account I/O.
 
-- [ ] **Step 5: Add a manual rescan command**
+- [x] **Step 5: Add a manual rescan command**
 
 Add and register:
 
@@ -776,7 +776,7 @@ pub async fn rescan_sessions(
 
 Extend `AppState` with `sessions: Arc<SessionService>`.
 
-- [ ] **Step 6: Run service and monitor tests**
+- [x] **Step 6: Run service and monitor tests**
 
 Run:
 
@@ -787,7 +787,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml monitor::
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src-tauri/src/sessions app/src-tauri/src/domain/dashboard.rs app/src-tauri/src/monitor.rs app/src-tauri/src/commands.rs app/src-tauri/src/lib.rs
@@ -804,7 +804,7 @@ git commit -m "feat: publish live local session summaries"
 - Modify: `app/src/components/Dashboard.test.tsx`
 - Modify: `app/src/styles/app.css`
 
-- [ ] **Step 1: Replace the phase-one empty-state test with failing session tests**
+- [x] **Step 1: Replace the phase-one empty-state test with failing session tests**
 
 Add a `localSessions` fixture and tests:
 
@@ -860,7 +860,7 @@ test("distinguishes import failure from a genuinely empty local history", () => 
 });
 ```
 
-- [ ] **Step 2: Run the React test and verify RED**
+- [x] **Step 2: Run the React test and verify RED**
 
 Run:
 
@@ -871,7 +871,7 @@ pnpm test -- src/components/Dashboard.test.tsx
 
 Expected: FAIL because `localSessions` and the real table do not exist.
 
-- [ ] **Step 3: Add frontend types and preview data**
+- [x] **Step 3: Add frontend types and preview data**
 
 Mirror the Rust camel-case models exactly in `types/dashboard.ts`, replace
 `sessionDetailsAvailable`, and add two realistic top-level rows to `previewSnapshot`.
@@ -885,7 +885,7 @@ rescanSessions: () =>
     : invoke<LocalSessionView>("rescan_sessions"),
 ```
 
-- [ ] **Step 4: Implement the expandable session table**
+- [x] **Step 4: Implement the expandable session table**
 
 `SessionDetails` receives `view: LocalSessionView` and `onRescan`. Use a semantic table with
 one `<tr>` per top-level session. The row button controls a detail row showing token categories.
@@ -895,13 +895,13 @@ Format Token counts with `Intl.NumberFormat("zh-CN", { notation: "compact" })`; 
 The visible columns are 会话, 项目, 模型, Token, 等效费用, 最后活动. Child count appears as a
 small `含 1 个子任务` badge, never as an independent row.
 
-- [ ] **Step 5: Style table, expansion, empty, and error states**
+- [x] **Step 5: Style table, expansion, empty, and error states**
 
 Add `.session-table`, `.session-row`, `.session-breakdown`, `.session-child-badge`,
 `.session-error`, and responsive rules. At widths below 760 px, hide project and model columns
 but keep them in the expanded detail.
 
-- [ ] **Step 6: Run the targeted test**
+- [x] **Step 6: Run the targeted test**
 
 Run:
 
@@ -912,7 +912,7 @@ pnpm test -- src/components/Dashboard.test.tsx
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/src/types/dashboard.ts app/src/lib/backend.ts app/src/components/SessionDetails.tsx app/src/components/Dashboard.tsx app/src/components/Dashboard.test.tsx app/src/styles/app.css
@@ -926,7 +926,7 @@ git commit -m "feat: show aggregated local session details"
 - Modify: `app/src/components/Dashboard.test.tsx`
 - Modify: `app/src/styles/app.css`
 
-- [ ] **Step 1: Write a failing progress semantics test**
+- [x] **Step 1: Write a failing progress semantics test**
 
 ```tsx
 test("fills the quota bar left to right using consumed percentage", () => {
@@ -946,7 +946,7 @@ test("fills the quota bar left to right using consumed percentage", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -957,7 +957,7 @@ pnpm test -- src/components/Dashboard.test.tsx -t "fills the quota bar"
 
 Expected: FAIL because the exact “已消耗” and remaining scale labels are absent.
 
-- [ ] **Step 3: Implement the approved horizontal bar**
+- [x] **Step 3: Implement the approved horizontal bar**
 
 Clamp the width:
 
@@ -978,7 +978,7 @@ Keep the large value as remaining, set the fill width to `usedPercent`, set
 Add `role="progressbar"`, `aria-valuemin={0}`, and `aria-valuemax={100}`. Apply warning and
 critical classes at 70% and 90% used.
 
-- [ ] **Step 4: Run the targeted and full dashboard tests**
+- [x] **Step 4: Run the targeted and full dashboard tests**
 
 Run:
 
@@ -989,7 +989,7 @@ pnpm test -- src/components/Dashboard.test.tsx
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/src/components/QuotaCard.tsx app/src/components/Dashboard.test.tsx app/src/styles/app.css
@@ -1007,7 +1007,7 @@ git commit -m "fix: make quota bar represent consumed usage"
 - Test: `app/src-tauri/src/tray.rs`
 - Test: `app/src/components/Dashboard.test.tsx`
 
-- [ ] **Step 1: Write failing pure formatter tests**
+- [x] **Step 1: Write failing pure formatter tests**
 
 ```rust
 #[test]
@@ -1032,7 +1032,7 @@ The ten-segment text bar is intentional: Tauri’s native `MenuItem` does not ex
 progress view, so this preserves native menu behavior without introducing a fragile custom
 popover window.
 
-- [ ] **Step 2: Run tray tests and verify RED**
+- [x] **Step 2: Run tray tests and verify RED**
 
 Run:
 
@@ -1042,7 +1042,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml tray::tests
 
 Expected: FAIL because `menu_state` does not exist.
 
-- [ ] **Step 3: Refactor tray construction into `TrayController`**
+- [x] **Step 3: Refactor tray construction into `TrayController`**
 
 Store handles for dynamic items:
 
@@ -1068,7 +1068,7 @@ Build the menu in this order: status items, separator, summary items, separator,
 `查看最近会话`, `立即刷新`, separator, `设置…`, `退出 Codex Monitor`. Disable all status
 and summary items. Use the existing snapshot subscription to call `apply`.
 
-- [ ] **Step 4: Implement actions**
+- [x] **Step 4: Implement actions**
 
 - `show`: show, center only when first opened, and focus the main window.
 - `sessions`: show/focus the window and emit `dashboard://focus-section` with `"sessions"`.
@@ -1083,7 +1083,7 @@ a temporary `.section-focused` class. For `settings`, focus the existing setting
 button; until the settings screen is implemented, the menu label is `设置（稍后）` and disabled,
 rather than presenting a non-working action.
 
-- [ ] **Step 5: Write and run the focus test**
+- [x] **Step 5: Write and run the focus test**
 
 ```tsx
 test("marks the session section as a focus target", () => {
@@ -1103,7 +1103,7 @@ cargo test --manifest-path src-tauri/Cargo.toml tray::tests
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/src-tauri/src/tray.rs app/src-tauri/src/lib.rs app/src-tauri/src/commands.rs app/src/lib/backend.ts app/src/components/Dashboard.tsx app/src/components/Dashboard.test.tsx
@@ -1122,7 +1122,7 @@ git commit -m "feat: expand menu bar status and actions"
 - Replace: `app/public/favicon.svg`
 - Test: `app/src/components/Dashboard.test.tsx`
 
-- [ ] **Step 1: Write a failing brand test**
+- [x] **Step 1: Write a failing brand test**
 
 ```tsx
 test("uses the remaining-window brand instead of a waveform", () => {
@@ -1132,7 +1132,7 @@ test("uses the remaining-window brand instead of a waveform", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -1143,7 +1143,7 @@ pnpm test -- src/components/Dashboard.test.tsx -t "remaining-window brand"
 
 Expected: FAIL because the sidebar still uses Phosphor `Waveform`.
 
-- [ ] **Step 3: Create the vector masters and React mark**
+- [x] **Step 3: Create the vector masters and React mark**
 
 `monitor-window.svg` uses:
 
@@ -1157,7 +1157,7 @@ Expected: FAIL because the sidebar still uses Phosphor `Waveform`.
 black on transparency at 44×44. `BrandMark.tsx` inlines the same geometry with
 `aria-label="Codex Monitor 余量窗口"`.
 
-- [ ] **Step 4: Generate platform icons**
+- [x] **Step 4: Generate platform icons**
 
 Run from `app`:
 
@@ -1178,12 +1178,12 @@ sips -s format png /tmp/codex-monitor-tray/tray-template.svg.png --out src-tauri
 Keep `brand/tray-template.svg` as the editable source. Change `tray.rs` to include
 `trayTemplate.png` with `icon_as_template(true)`.
 
-- [ ] **Step 5: Replace sidebar and favicon**
+- [x] **Step 5: Replace sidebar and favicon**
 
 Use `<BrandMark />` in `AppSidebar`, copy the vector geometry into `public/favicon.svg`, and
 remove the `Waveform` import.
 
-- [ ] **Step 6: Run brand test and inspect generated assets**
+- [x] **Step 6: Run brand test and inspect generated assets**
 
 Run:
 
@@ -1195,7 +1195,7 @@ file src-tauri/icons/icon.icns src-tauri/icons/icon.ico src-tauri/icons/trayTemp
 
 Expected: test PASS; `file` identifies valid ICNS, Windows icon, and PNG files.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/brand app/src/components/BrandMark.tsx app/src/components/AppSidebar.tsx app/public/favicon.svg app/src-tauri/icons app/src-tauri/src/tray.rs app/src/components/Dashboard.test.tsx
@@ -1205,10 +1205,10 @@ git commit -m "feat: introduce remaining-window identity"
 ## Task 10: End-to-End Verification and Documentation
 
 **Files:**
-- Modify: `README.md`
+- Modify: `app/README.md`
 - Modify: `docs/superpowers/plans/2026-07-29-session-tray-brand-upgrade.md`
 
-- [ ] **Step 1: Document data scope and privacy**
+- [x] **Step 1: Document data scope and privacy**
 
 Add a README section stating:
 
@@ -1218,7 +1218,7 @@ Add a README section stating:
 - prompts, responses, tool output, and reasoning are not stored in SQLite;
 - equivalent cost is an API-price estimate, not a bill.
 
-- [ ] **Step 2: Run Rust formatting and lint**
+- [x] **Step 2: Run Rust formatting and lint**
 
 Run:
 
@@ -1229,7 +1229,7 @@ cargo clippy --manifest-path app/src-tauri/Cargo.toml --all-targets -- -D warnin
 
 Expected: both commands exit 0 with no warnings.
 
-- [ ] **Step 3: Run all Rust tests**
+- [x] **Step 3: Run all Rust tests**
 
 Run:
 
@@ -1239,7 +1239,7 @@ cargo test --manifest-path app/src-tauri/Cargo.toml
 
 Expected: all tests PASS with zero failures.
 
-- [ ] **Step 4: Run all frontend checks**
+- [x] **Step 4: Run all frontend checks**
 
 Run:
 
@@ -1282,6 +1282,13 @@ Verify:
 - “查看最近会话” opens and focuses the session section;
 - the colored Dock icon and monochrome menu icon match the approved remaining-window design;
 - quota fill is 25% wide when the UI reports 25% consumed.
+
+Runtime evidence on 2026-07-29: the debug `.app` bundle loaded the account snapshot, completed a
+read-only scan of 1,725 local files, rendered the 100 most recent top-level sessions, expanded a
+session into its Token breakdown, and exposed the quota progress value through macOS
+accessibility. Native tray menu formatting and actions are covered by five Rust tests; visual
+inspection of the system tray menu remains unchecked because the macOS automation endpoint timed
+out.
 
 - [ ] **Step 7: Mark checklist items complete and commit**
 

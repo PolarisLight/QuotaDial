@@ -164,7 +164,9 @@ pub fn build(
     let refresh_item = refresh.clone();
 
     let tray = TrayIconBuilder::with_id("codex-monitor")
-        .icon(Image::from_bytes(include_bytes!("../icons/trayTemplate.png"))?)
+        .icon(Image::from_bytes(include_bytes!(
+            "../icons/trayTemplate.png"
+        ))?)
         .icon_as_template(true)
         .tooltip("Codex Monitor")
         .title(tray_title(None, false))
@@ -324,8 +326,10 @@ mod tests {
 
     #[test]
     fn formats_missing_account_data_without_hiding_local_sessions() {
-        let mut snapshot = DashboardSnapshot::default();
-        snapshot.local_sessions = snapshot_with_quota_and_sessions().local_sessions;
+        let snapshot = DashboardSnapshot {
+            local_sessions: snapshot_with_quota_and_sessions().local_sessions,
+            ..DashboardSnapshot::default()
+        };
         let state = menu_state(&snapshot);
         assert_eq!(state.quota, "等待账号额度");
         assert_eq!(state.sessions, "本机会话  3 个");
