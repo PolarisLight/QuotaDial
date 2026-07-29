@@ -9,6 +9,7 @@ use crate::{
     },
     error::AppError,
     forecast,
+    quota_trend,
     sessions::service::SessionService,
     storage::repository::AccountRepository,
 };
@@ -218,12 +219,21 @@ impl AccountMonitor {
         self.repository
             .insert_rate_limits(now, &rate_limits, &raw_rate_limits)?;
         let (primary_quota, other_quotas) = quota_views(&rate_limits);
-        let forecast = primary_quota.as_ref().and_then(|quota| {
+        let segment = primary_quota.as_ref().and_then(|quota| {
             self.repository
                 .current_segment(&quota.limit_id, &quota.window_kind)
                 .ok()
-                .and_then(|points| forecast::forecast(&points, now, quota.resets_at))
+                .map(|points| (quota.resets_at, quota.window_duration_mins, points))
         });
+        let forecast = segment
+            .as_ref()
+            .and_then(|(resets_at, _, points)| forecast::forecast(points, now, *resets_at));
+        let trend = segment
+            .as_ref()
+            .map(|(_, window_duration_mins, points)| {
+                quota_trend::build_trend(points, *window_duration_mins)
+            })
+            .unwrap_or_default();
 
         let (account_usage, account_usage_error) = match self.source.read_account_usage().await {
             Ok((usage, raw_usage)) => {
@@ -243,6 +253,8 @@ impl AccountMonitor {
             other_quotas,
             account_usage,
             forecast,
+            quota_history: trend.history,
+            quota_pace: trend.pace,
             local_sessions: self.sessions.snapshot(),
         };
         self.snapshot.send_replace(snapshot.clone());
@@ -469,7 +481,15 @@ mod tests {
 
         assert_eq!(source.rate_reads.load(Ordering::SeqCst), 1);
         assert_eq!(source.usage_reads.load(Ordering::SeqCst), 1);
-        assert_eq!(snapshot.primary_quota.unwrap().remaining_percent, 82.0);
+        assert_eq!(
+            snapshot.primary_quota.as_ref().unwrap().remaining_percent,
+            82.0
+        );
+        assert_eq!(
+            snapshot.quota_history.last().unwrap().remaining_percent,
+            82.0
+        );
+        assert_eq!(snapshot.quota_pace, None);
         assert_eq!(
             snapshot.account_usage.unwrap().daily_usage_buckets[0].tokens,
             3_000

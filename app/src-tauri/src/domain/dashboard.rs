@@ -1,6 +1,7 @@
 use super::account::{AccountUsageResult, DailyUsageBucket};
 use super::session::LocalSessionView;
 use crate::forecast::ExhaustionForecast;
+use crate::quota_trend::{QuotaHistoryPoint, QuotaPace};
 
 #[derive(Debug, Clone, serde::Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +46,8 @@ pub struct DashboardSnapshot {
     pub other_quotas: Vec<QuotaView>,
     pub account_usage: Option<AccountUsageView>,
     pub forecast: Option<ExhaustionForecast>,
+    pub quota_history: Vec<QuotaHistoryPoint>,
+    pub quota_pace: Option<QuotaPace>,
     pub local_sessions: LocalSessionView,
 }
 
@@ -59,6 +62,8 @@ impl Default for DashboardSnapshot {
             other_quotas: Vec::new(),
             account_usage: None,
             forecast: None,
+            quota_history: Vec::new(),
+            quota_pace: None,
             local_sessions: LocalSessionView::default(),
         }
     }
