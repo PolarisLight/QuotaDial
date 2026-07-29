@@ -2,8 +2,22 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { DashboardSnapshot, LocalSessionView } from "../types/dashboard";
 
+const PREVIEW_DAY_SECONDS = 86_400;
+const previewNow = Math.floor(Date.now() / 1_000);
+const previewDate = new Date(previewNow * 1_000);
+const previewMonthDay = `${previewDate.getMonth() + 1}月${previewDate.getDate()}日`;
+const previewDateKey = (daysAgo: number) => {
+  const date = new Date(previewNow * 1_000);
+  date.setDate(date.getDate() - daysAgo);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
 const previewSnapshot: DashboardSnapshot = {
-  observedAt: Math.floor(Date.now() / 1_000),
+  observedAt: previewNow,
   isStale: false,
   connectionError: null,
   accountUsageError: null,
@@ -14,58 +28,43 @@ const previewSnapshot: DashboardSnapshot = {
     usedPercent: 18,
     remainingPercent: 82,
     windowDurationMins: 10_080,
-    resetsAt: Math.floor(Date.now() / 1_000) + 4 * 86_400,
+    resetsAt: previewNow + 4 * PREVIEW_DAY_SECONDS,
     planType: "plus",
   },
   otherQuotas: [],
   accountUsage: {
     lifetimeTokens: 2_400_000,
     peakDailyTokens: 680_000,
-    dailyUsageBuckets: [
-      { startDate: "2026-07-23", tokens: 120_000 },
-      { startDate: "2026-07-24", tokens: 260_000 },
-      { startDate: "2026-07-25", tokens: 180_000 },
-      { startDate: "2026-07-26", tokens: 420_000 },
-      { startDate: "2026-07-27", tokens: 340_000 },
-      { startDate: "2026-07-28", tokens: 530_000 },
-      { startDate: "2026-07-29", tokens: 550_000 },
-    ],
+    dailyUsageBuckets: [120_000, 260_000, 180_000, 420_000, 340_000, 530_000, 550_000].map(
+      (tokens, index) => ({
+        startDate: previewDateKey(6 - index),
+        tokens,
+      }),
+    ),
   },
   forecast: {
     status: "depletesBeforeReset",
     ratePercentPerHour: 1.7,
-    exhaustsAt: Math.floor(Date.now() / 1_000) + 36 * 3_600,
+    exhaustsAt: previewNow + 36 * 3_600,
     confidence: "medium",
     sampleCount: 6,
     spanSeconds: 10_800,
   },
   quotaHistory: [
     {
-      observedAt: new Date(2026, 6, 23, 12).getTime() / 1_000,
-      remainingPercent: 100,
+      observedAt: previewNow - 3 * PREVIEW_DAY_SECONDS + 3_600,
+      remainingPercent: 98,
     },
     {
-      observedAt: new Date(2026, 6, 24, 12).getTime() / 1_000,
-      remainingPercent: 96,
+      observedAt: previewNow - 2 * PREVIEW_DAY_SECONDS,
+      remainingPercent: 93,
     },
     {
-      observedAt: new Date(2026, 6, 25, 12).getTime() / 1_000,
-      remainingPercent: 92,
+      observedAt: previewNow - PREVIEW_DAY_SECONDS,
+      remainingPercent: 87,
     },
     {
-      observedAt: new Date(2026, 6, 26, 12).getTime() / 1_000,
-      remainingPercent: 89,
-    },
-    {
-      observedAt: new Date(2026, 6, 27, 12).getTime() / 1_000,
-      remainingPercent: 86,
-    },
-    {
-      observedAt: new Date(2026, 6, 28, 12).getTime() / 1_000,
-      remainingPercent: 84,
-    },
-    {
-      observedAt: new Date(2026, 6, 29, 12).getTime() / 1_000,
+      observedAt: previewNow,
       remainingPercent: 82,
     },
   ],
@@ -79,9 +78,9 @@ const previewSnapshot: DashboardSnapshot = {
     sessions: [
       {
         sessionId: "preview-session-1",
-        title: "codex-monitor · 7月29日",
+        title: `codex-monitor · ${previewMonthDay}`,
         projectPath: "/Users/demo/Projects/codex-monitor",
-        lastActiveAt: Math.floor(Date.now() / 1_000) - 320,
+        lastActiveAt: previewNow - 320,
         primaryModel: "gpt-5.6-terra",
         tokens: {
           inputTokens: 184_200,
@@ -96,9 +95,9 @@ const previewSnapshot: DashboardSnapshot = {
       },
       {
         sessionId: "preview-session-2",
-        title: "research-notes · 7月29日",
+        title: `research-notes · ${previewMonthDay}`,
         projectPath: "/Users/demo/Research/research-notes",
-        lastActiveAt: Math.floor(Date.now() / 1_000) - 2_400,
+        lastActiveAt: previewNow - 2_400,
         primaryModel: "gpt-5.6-sol",
         tokens: {
           inputTokens: 91_500,
@@ -115,7 +114,7 @@ const previewSnapshot: DashboardSnapshot = {
     diagnostics: {
       scannedFiles: 8,
       skippedLines: 0,
-      lastImportedAt: Math.floor(Date.now() / 1_000),
+      lastImportedAt: previewNow,
       lastError: null,
     },
   },

@@ -517,6 +517,11 @@ h2 {
   stroke-width: 1;
 }
 
+.usage-day-boundary {
+  stroke: color-mix(in srgb, var(--line-strong) 68%, transparent);
+  stroke-width: 0.8;
+}
+
 .quota-normal-band {
   fill: color-mix(in srgb, var(--success) 10%, transparent);
 }

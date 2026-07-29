@@ -47,6 +47,7 @@ describe("UsageQuotaChart", () => {
     );
 
     expect(container.querySelectorAll(".token-bar")).toHaveLength(7);
+    expect(container.querySelectorAll(".usage-day-boundary")).toHaveLength(8);
     const path = container.querySelector(
       '[data-testid="remaining-quota-line"]',
     );

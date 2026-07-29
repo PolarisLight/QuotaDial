@@ -29,6 +29,28 @@ function nextLocalMidnight(date: string) {
   return new Date(year, month - 1, day + 1).getTime() / 1_000;
 }
 
+function nextCalendarBoundary(timestamp: number) {
+  const date = new Date(timestamp * 1_000);
+  return (
+    new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() + 1,
+    ).getTime() / 1_000
+  );
+}
+
+function calendarBoundaries(start: number, end: number) {
+  const boundaries = [start];
+  let cursor = nextCalendarBoundary(start);
+  while (cursor < end && boundaries.length < 10) {
+    boundaries.push(cursor);
+    cursor = nextCalendarBoundary(cursor);
+  }
+  if (boundaries.at(-1) !== end) boundaries.push(end);
+  return boundaries;
+}
+
 function shortDate(timestamp: number) {
   const date = new Date(timestamp * 1_000);
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(
@@ -108,10 +130,22 @@ export function UsageQuotaChart({
     quota?.resetsAt ?? (lastDate ? nextLocalMidnight(lastDate) : null);
   const rangeSeconds =
     rangeStart !== null && rangeEnd !== null ? rangeEnd - rangeStart : 0;
+  const xAt = (timestamp: number) => {
+    if (rangeStart === null || rangeSeconds <= 0) return LEFT;
+    const ratio = Math.min(
+      1,
+      Math.max(0, (timestamp - rangeStart) / rangeSeconds),
+    );
+    return LEFT + ratio * (RIGHT - LEFT);
+  };
+  const timeBoundaries =
+    rangeStart !== null && rangeEnd !== null && rangeSeconds > 0
+      ? calendarBoundaries(rangeStart, rangeEnd)
+      : [];
   const chartSlots =
-    quota && rangeStart !== null && rangeSeconds > 0
-      ? Array.from({ length: 7 }, (_, index) => {
-          const start = rangeStart + (rangeSeconds * index) / 7;
+    timeBoundaries.length >= 2
+      ? timeBoundaries.slice(0, -1).map((start, index) => {
+          const end = timeBoundaries[index + 1];
           const slotDate = localDateKey(start);
           const matching = buckets.filter(
             bucket => bucket.startDate === slotDate,
@@ -119,6 +153,8 @@ export function UsageQuotaChart({
           return {
             key: `${start}`,
             label: shortDate(start),
+            start,
+            end,
             tokens: matching.reduce((sum, bucket) => sum + bucket.tokens, 0),
             hasData: matching.length > 0,
             title:
@@ -130,22 +166,13 @@ export function UsageQuotaChart({
       : visibleBuckets.map(bucket => ({
           key: bucket.startDate,
           label: bucket.startDate.slice(5).replace("-", "/"),
+          start: localMidnight(bucket.startDate),
+          end: nextLocalMidnight(bucket.startDate),
           tokens: bucket.tokens,
           hasData: true,
           title: bucket.startDate,
         }));
   const maxTokens = Math.max(...chartSlots.map(slot => slot.tokens), 1);
-  const slotWidth =
-    chartSlots.length > 0 ? (RIGHT - LEFT) / chartSlots.length : 0;
-
-  const xAt = (timestamp: number) => {
-    if (rangeStart === null || rangeSeconds <= 0) return LEFT;
-    const ratio = Math.min(
-      1,
-      Math.max(0, (timestamp - rangeStart) / rangeSeconds),
-    );
-    return LEFT + ratio * (RIGHT - LEFT);
-  };
 
   const observedQuotaPoints =
     rangeStart === null || rangeEnd === null
@@ -223,6 +250,19 @@ export function UsageQuotaChart({
       </div>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img">
         <title>最近 7 日 Token 柱形与剩余额度折线</title>
+        {timeBoundaries.map((timestamp, index) => {
+          const x = xAt(timestamp);
+          return (
+            <line
+              className="usage-day-boundary"
+              key={`day-${index}`}
+              x1={x}
+              x2={x}
+              y1={TOP}
+              y2={BOTTOM}
+            />
+          );
+        })}
         {[TOP, TOP + PLOT_HEIGHT / 2, BOTTOM].map(y => (
           <line
             className="usage-grid-line"
@@ -251,13 +291,15 @@ export function UsageQuotaChart({
             />
           </>
         )}
-        {chartSlots.map((slot, index) => {
+        {chartSlots.map(slot => {
           const height = Math.max(
             7,
             (slot.tokens / maxTokens) * PLOT_HEIGHT,
           );
-          const width = Math.min(26, slotWidth * 0.48);
-          const center = LEFT + slotWidth * (index + 0.5);
+          const slotLeft = xAt(slot.start);
+          const slotRight = xAt(slot.end);
+          const width = Math.min(26, (slotRight - slotLeft) * 0.48);
+          const center = (slotLeft + slotRight) / 2;
           return (
             <g key={slot.key}>
               {slot.hasData ? (
