@@ -135,6 +135,32 @@ describe("Dashboard", () => {
     expect(screen.getByText("按当前速率，本周期不会耗尽")).toBeVisible();
   });
 
+  test("limits the token chart to the seven most recent daily buckets", () => {
+    const dailyUsageBuckets = Array.from({ length: 12 }, (_, index) => ({
+      startDate: `2026-07-${String(index + 18).padStart(2, "0")}`,
+      tokens: (index + 1) * 1_000,
+    }));
+    const { container } = render(
+      <DashboardView
+        snapshot={{
+          ...snapshot,
+          accountUsage: {
+            ...snapshot.accountUsage!,
+            dailyUsageBuckets,
+          },
+        }}
+        loading={false}
+        refreshing={false}
+        error={null}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelectorAll(".token-column")).toHaveLength(7);
+    expect(screen.queryByText("07/18")).not.toBeInTheDocument();
+    expect(screen.getByText("07/29")).toBeVisible();
+  });
+
   test("does not fabricate session rows in phase one", () => {
     renderDashboard();
 

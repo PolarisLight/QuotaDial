@@ -417,6 +417,7 @@ h2 {
   align-items: end;
   gap: 8px;
   margin-top: 18px;
+  overflow: hidden;
   padding-top: 8px;
   border-bottom: 1px solid var(--line);
 }

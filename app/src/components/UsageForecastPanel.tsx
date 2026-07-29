@@ -53,7 +53,7 @@ export function UsageForecastPanel({
   forecast,
 }: UsageForecastPanelProps) {
   const copy = forecastCopy(forecast);
-  const buckets = usage?.dailyUsageBuckets ?? [];
+  const buckets = usage?.dailyUsageBuckets.slice(-7) ?? [];
   const maxTokens = Math.max(...buckets.map(bucket => bucket.tokens), 1);
   const today = buckets.at(-1)?.tokens ?? null;
 
@@ -84,7 +84,7 @@ export function UsageForecastPanel({
             </div>
           </div>
 
-          <div className="token-chart" aria-label="最近每日 Token">
+          <div className="token-chart" aria-label="最近 7 日 Token">
             {buckets.map(bucket => (
               <div className="token-column" key={bucket.startDate}>
                 <span
