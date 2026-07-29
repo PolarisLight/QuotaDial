@@ -1,11 +1,13 @@
 import {
   ArrowClockwise,
   CaretDown,
+  CaretUp,
   ChatCenteredDots,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { backend } from "../lib/backend";
+import { summarizeMonthlyValue } from "../lib/costSummary";
 import {
   sortSessions,
   type SessionSort,
@@ -18,6 +20,7 @@ import type {
 
 interface SessionDetailsProps {
   view: LocalSessionView;
+  monthlySubscriptionUsd: number;
 }
 
 const compactNumber = new Intl.NumberFormat("zh-CN", {
@@ -51,11 +54,18 @@ function projectName(path: string | null) {
   return path?.split(/[\\/]/).filter(Boolean).at(-1) ?? "未命名项目";
 }
 
-export function SessionDetails({ view }: SessionDetailsProps) {
+export function SessionDetails({
+  view,
+  monthlySubscriptionUsd,
+}: SessionDetailsProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
   const [sort, setSort] = useState<SessionSort>("recent");
   const sessions = sortSessions(view.sessions, sort);
+  const monthlyValue = summarizeMonthlyValue(
+    view.monthlySummary,
+    monthlySubscriptionUsd,
+  );
 
   const rescan = async () => {
     setRescanning(true);
@@ -78,25 +88,27 @@ export function SessionDetails({ view }: SessionDetailsProps) {
           <h2 id="sessions-heading">会话详情</h2>
         </div>
         {view.sessions.length > 0 && (
-          <div className="session-heading-actions">
-            <span className="session-scan-time">
-              {view.sessions.length} 个会话
-            </span>
-            <label className="session-sort">
-              <span>排序</span>
-              <select
-                aria-label="会话排序"
-                value={sort}
-                onChange={event => setSort(event.target.value as SessionSort)}
-              >
-                <option value="recent">最近活动</option>
-                <option value="tokensDesc">Token 最多</option>
-                <option value="tokensAsc">Token 最少</option>
-              </select>
-            </label>
-          </div>
+          <span className="session-scan-time">
+            {view.sessions.length} 个会话
+          </span>
         )}
       </div>
+
+      <dl className="monthly-session-summary" aria-label="本月使用汇总">
+        <div>
+          <dt>本月 Token</dt>
+          <dd>{compactNumber.format(totalTokens(view.monthlySummary.tokens))}</dd>
+        </div>
+        <div>
+          <dt>本月等效价值</dt>
+          <dd>{monthlyValue.value}</dd>
+        </div>
+        <div>
+          <dt>回本比例</dt>
+          <dd>{monthlyValue.roi}</dd>
+          <small>{monthlyValue.roiNote}</small>
+        </div>
+      </dl>
 
       {view.diagnostics.lastError ? (
         <div className="session-error">
@@ -136,9 +148,43 @@ export function SessionDetails({ view }: SessionDetailsProps) {
                 <th>会话</th>
                 <th>项目</th>
                 <th>模型</th>
-                <th>Token</th>
+                <th>
+                  <button
+                    className={sort.startsWith("tokens") ? "active" : ""}
+                    type="button"
+                    aria-label={
+                      sort === "tokensDesc"
+                        ? "Token，降序"
+                        : sort === "tokensAsc"
+                          ? "Token，升序"
+                          : "Token"
+                    }
+                    onClick={() =>
+                      setSort(current =>
+                        current === "tokensDesc" ? "tokensAsc" : "tokensDesc",
+                      )
+                    }
+                  >
+                    Token
+                    {sort === "tokensDesc" ? (
+                      <CaretDown size={10} />
+                    ) : sort === "tokensAsc" ? (
+                      <CaretUp size={10} />
+                    ) : null}
+                  </button>
+                </th>
                 <th>等效费用</th>
-                <th>最后活动</th>
+                <th>
+                  <button
+                    className={sort === "recent" ? "active" : ""}
+                    type="button"
+                    aria-label="最后活动"
+                    onClick={() => setSort("recent")}
+                  >
+                    最后活动
+                    {sort === "recent" && <CaretDown size={10} />}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>

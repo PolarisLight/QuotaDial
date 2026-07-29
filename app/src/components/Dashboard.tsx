@@ -2,6 +2,7 @@ import { ArrowClockwise, CloudSlash, WarningCircle } from "@phosphor-icons/react
 import { useEffect, useState } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import { backend } from "../lib/backend";
+import { summarizeMonthlyValue } from "../lib/costSummary";
 import type { DashboardSnapshot } from "../types/dashboard";
 import {
   DEFAULT_APP_SETTINGS,
@@ -52,17 +53,20 @@ export function DashboardView({
         className="content"
         style={{
           height: "100%",
-          overflowY: "auto",
-          overscrollBehaviorY: "none",
+          overflow: "hidden",
         }}
       >
-        {destination === "settings" ? (
-          <SettingsPage
-            settings={settings}
-            onBack={() => onNavigate("overview")}
-            onSave={onSaveSettings}
-          />
-        ) : (
+        <div
+          className={`page-scroll ${destination !== "overview" ? "inactive" : ""}`}
+          data-page="overview"
+          aria-hidden={destination !== "overview"}
+          style={{
+            overflowY: "auto",
+            overscrollBehaviorY: "none",
+            visibility: destination === "overview" ? "visible" : "hidden",
+            pointerEvents: destination === "overview" ? "auto" : "none",
+          }}
+        >
           <>
             <header className="page-header">
               <div>
@@ -107,6 +111,10 @@ export function DashboardView({
                       quota={snapshot.primaryQuota}
                       observedAt={snapshot.observedAt}
                       refreshing={refreshing}
+                      monthlyValue={summarizeMonthlyValue(
+                        snapshot.localSessions.monthlySummary,
+                        settings.monthlySubscriptionUsd,
+                      )}
                       onRefresh={onRefresh}
                     />
                   ) : (
@@ -128,11 +136,31 @@ export function DashboardView({
                     }
                   />
                 </section>
-                <SessionDetails view={snapshot.localSessions} />
+                <SessionDetails
+                  view={snapshot.localSessions}
+                  monthlySubscriptionUsd={settings.monthlySubscriptionUsd}
+                />
               </>
             )}
           </>
-        )}
+        </div>
+        <div
+          className={`page-scroll ${destination !== "settings" ? "inactive" : ""}`}
+          data-page="settings"
+          aria-hidden={destination !== "settings"}
+          style={{
+            overflowY: "auto",
+            overscrollBehaviorY: "none",
+            visibility: destination === "settings" ? "visible" : "hidden",
+            pointerEvents: destination === "settings" ? "auto" : "none",
+          }}
+        >
+          <SettingsPage
+            settings={settings}
+            onBack={() => onNavigate("overview")}
+            onSave={onSaveSettings}
+          />
+        </div>
       </main>
     </div>
   );

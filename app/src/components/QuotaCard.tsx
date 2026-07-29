@@ -1,10 +1,18 @@
-import { ArrowClockwise, Devices, Timer } from "@phosphor-icons/react";
+import {
+  ArrowClockwise,
+  CurrencyDollar,
+  Devices,
+  Percent,
+  Timer,
+} from "@phosphor-icons/react";
+import type { MonthlyValueSummary } from "../lib/costSummary";
 import type { QuotaView } from "../types/dashboard";
 
 interface QuotaCardProps {
   quota: QuotaView;
   observedAt: number;
   refreshing: boolean;
+  monthlyValue: MonthlyValueSummary;
   onRefresh: () => void;
 }
 
@@ -28,6 +36,7 @@ export function QuotaCard({
   quota,
   observedAt,
   refreshing,
+  monthlyValue,
   onRefresh,
 }: QuotaCardProps) {
   const usedPercent = Math.min(100, Math.max(0, quota.usedPercent));
@@ -89,6 +98,26 @@ export function QuotaCard({
             统计范围
           </dt>
           <dd>所有设备</dd>
+        </div>
+        <div className="quota-cost">
+          <dt>
+            <CurrencyDollar size={16} />
+            本月等效价值
+          </dt>
+          <dd>
+            <strong>{monthlyValue.value}</strong>
+            <small>{monthlyValue.note}</small>
+          </dd>
+        </div>
+        <div className="quota-cost">
+          <dt>
+            <Percent size={16} />
+            回本比例
+          </dt>
+          <dd>
+            <strong>{monthlyValue.roi}</strong>
+            <small>{monthlyValue.roiNote}</small>
+          </dd>
         </div>
       </dl>
 

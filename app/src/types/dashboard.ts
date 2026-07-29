@@ -72,8 +72,18 @@ export interface SessionDiagnostics {
   lastError: string | null;
 }
 
+export interface MonthlyUsageSummary {
+  periodStart: number;
+  periodEnd: number;
+  tokens: TokenBreakdown;
+  equivalentCostUsd: number | null;
+  pricedTokens: number;
+  unpricedTokens: number;
+}
+
 export interface LocalSessionView {
   sessions: SessionSummary[];
+  monthlySummary: MonthlyUsageSummary;
   diagnostics: SessionDiagnostics;
 }
 

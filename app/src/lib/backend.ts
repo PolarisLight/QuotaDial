@@ -9,6 +9,12 @@ import {
 const PREVIEW_DAY_SECONDS = 86_400;
 const previewNow = Math.floor(Date.now() / 1_000);
 const previewDate = new Date(previewNow * 1_000);
+const previewMonthStart =
+  new Date(previewDate.getFullYear(), previewDate.getMonth(), 1).getTime() /
+  1_000;
+const previewMonthEnd =
+  new Date(previewDate.getFullYear(), previewDate.getMonth() + 1, 1).getTime() /
+  1_000;
 const previewMonthDay = `${previewDate.getMonth() + 1}月${previewDate.getDate()}日`;
 const previewDateKey = (daysAgo: number) => {
   const date = new Date(previewNow * 1_000);
@@ -115,6 +121,19 @@ const previewSnapshot: DashboardSnapshot = {
         childSessionCount: 0,
       },
     ],
+    monthlySummary: {
+      periodStart: previewMonthStart,
+      periodEnd: previewMonthEnd,
+      tokens: {
+        inputTokens: 275_700,
+        cachedInputTokens: 172_300,
+        outputTokens: 38_200,
+        reasoningOutputTokens: 14_100,
+      },
+      equivalentCostUsd: 1.16,
+      pricedTokens: 313_900,
+      unpricedTokens: 0,
+    },
     diagnostics: {
       scannedFiles: 8,
       skippedLines: 0,

@@ -34,6 +34,19 @@ const snapshot: DashboardSnapshot = {
   quotaPace: null,
   localSessions: {
     sessions: [],
+    monthlySummary: {
+      periodStart: 1_751_299_200,
+      periodEnd: 1_753_977_600,
+      tokens: {
+        inputTokens: 0,
+        cachedInputTokens: 0,
+        outputTokens: 0,
+        reasoningOutputTokens: 0,
+      },
+      equivalentCostUsd: 0,
+      pricedTokens: 0,
+      unpricedTokens: 0,
+    },
     diagnostics: {
       scannedFiles: 0,
       skippedLines: 0,

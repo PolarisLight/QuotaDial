@@ -39,7 +39,19 @@ pub struct SessionDiagnostics {
 
 #[derive(Debug, Clone, Default, serde::Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct MonthlyUsageSummary {
+    pub period_start: i64,
+    pub period_end: i64,
+    pub tokens: TokenBreakdown,
+    pub equivalent_cost_usd: Option<f64>,
+    pub priced_tokens: i64,
+    pub unpriced_tokens: i64,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct LocalSessionView {
     pub sessions: Vec<SessionSummary>,
+    pub monthly_summary: MonthlyUsageSummary,
     pub diagnostics: SessionDiagnostics,
 }

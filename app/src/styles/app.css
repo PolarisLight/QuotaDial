@@ -215,12 +215,27 @@ button:focus-visible {
 }
 
 .content {
+  position: relative;
   height: 100%;
   min-width: 0;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+.page-scroll {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   padding: 36px 40px 38px;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior-y: none;
   scrollbar-gutter: stable;
+}
+
+.page-scroll.inactive {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .page-header {
@@ -423,6 +438,26 @@ h2 {
   margin: 0;
   font-size: 11px;
   font-weight: 610;
+}
+
+.quota-cost dd {
+  text-align: right;
+}
+
+.quota-cost dd strong,
+.quota-cost dd small {
+  display: block;
+}
+
+.quota-cost dd strong {
+  font-size: 12px;
+}
+
+.quota-cost dd small {
+  margin-top: 3px;
+  color: var(--subtle);
+  font-size: 8px;
+  font-weight: 500;
 }
 
 .last-updated {
@@ -649,8 +684,8 @@ h2 {
   display: grid;
   grid-template-columns: 38px 1fr;
   gap: 12px;
-  margin-top: 19px;
-  padding-top: 17px;
+  margin-top: 22px;
+  padding: 19px 0 17px;
   border-top: 1px solid var(--line);
 }
 
@@ -690,23 +725,6 @@ h2 {
   font-size: 9px;
 }
 
-.cost-note {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: auto;
-  padding-top: 14px;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
-  font-size: 10px;
-}
-
-.cost-note strong {
-  margin-left: auto;
-  color: var(--text);
-  font-weight: 570;
-}
-
 .sessions-panel {
   margin-top: 16px;
   padding: 22px 23px;
@@ -724,36 +742,49 @@ h2 {
   font-size: 10px;
 }
 
-.session-heading-actions,
-.session-sort {
-  display: flex;
-  align-items: center;
+.monthly-session-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 0;
 }
 
-.session-heading-actions {
-  gap: 12px;
+.monthly-session-summary > div {
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 11px;
 }
 
-.session-sort {
-  gap: 6px;
+.monthly-session-summary dt,
+.monthly-session-summary small {
   color: var(--subtle);
-  font-size: 10px;
+  font-size: 9px;
 }
 
-.session-sort select,
+.monthly-session-summary dd {
+  margin: 5px 0 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monthly-session-summary small {
+  display: block;
+  margin-top: 3px;
+}
+
 .setting-row select,
-.notification-threshold input[type="number"] {
+.notification-threshold input[type="number"],
+.subscription-price input {
   color: var(--text);
   background: var(--surface-raised);
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   font: inherit;
-}
-
-.session-sort select {
-  min-width: 104px;
-  padding: 5px 24px 5px 8px;
-  font-size: 10px;
 }
 
 .session-table-wrap {
@@ -783,6 +814,23 @@ h2 {
   font-size: 9px;
   font-weight: 600;
   text-align: left;
+}
+
+.session-table th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: inherit;
+}
+
+.session-table th button.active {
+  color: var(--accent);
 }
 
 .session-table th:nth-child(2) {
@@ -1190,6 +1238,20 @@ h2 {
   font-size: 10px;
 }
 
+.subscription-price {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.subscription-price input {
+  width: 76px;
+  padding: 6px 8px;
+  text-align: right;
+}
+
 .setting-toggle {
   cursor: pointer;
 }
@@ -1356,7 +1418,7 @@ h2 {
     display: none;
   }
 
-  .content {
+  .page-scroll {
     padding: 30px 26px;
   }
 
@@ -1392,7 +1454,7 @@ h2 {
     display: none;
   }
 
-  .content {
+  .page-scroll {
     padding: 25px 18px;
   }
 

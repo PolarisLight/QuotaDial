@@ -2,7 +2,10 @@ use super::migrations;
 use crate::{
     domain::{
         account::{AccountUsageResult, RateLimitsResult, RateWindow},
-        session::{LocalSessionView, SessionDiagnostics, SessionSummary, TokenBreakdown},
+        session::{
+            LocalSessionView, MonthlyUsageSummary, SessionDiagnostics, SessionSummary,
+            TokenBreakdown,
+        },
     },
     error::AppError,
     sessions::{
@@ -11,6 +14,7 @@ use crate::{
     },
     settings::AppSettings,
 };
+use chrono::{Datelike, Local, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::{
     collections::{HashMap, HashSet},
@@ -345,6 +349,13 @@ impl AccountRepository {
             .collect::<HashMap<_, _>>();
         let catalog = PriceCatalog::built_in();
         let mut groups: HashMap<String, SessionAccumulator> = HashMap::new();
+        let (period_start, period_end) = local_month_bounds(now)?;
+        let mut monthly_summary = MonthlyUsageSummary {
+            period_start,
+            period_end,
+            ..MonthlyUsageSummary::default()
+        };
+        let mut monthly_cost_usd = 0.0;
 
         for (session_id, item) in &metadata {
             let root_id = resolve_root(session_id, &parents);
@@ -358,6 +369,25 @@ impl AccountRepository {
         }
 
         for event in events {
+            let event_tokens = event.tokens.total();
+            let estimated_cost = event
+                .model
+                .as_deref()
+                .and_then(|model| catalog.estimate(model, event.occurred_at, &event.tokens));
+            if (period_start..period_end).contains(&event.occurred_at) {
+                monthly_summary.tokens.input_tokens += event.tokens.input_tokens;
+                monthly_summary.tokens.cached_input_tokens += event.tokens.cached_input_tokens;
+                monthly_summary.tokens.output_tokens += event.tokens.output_tokens;
+                monthly_summary.tokens.reasoning_output_tokens +=
+                    event.tokens.reasoning_output_tokens;
+                if let Some(cost) = estimated_cost {
+                    monthly_cost_usd += cost;
+                    monthly_summary.priced_tokens += event_tokens;
+                } else {
+                    monthly_summary.unpriced_tokens += event_tokens;
+                }
+            }
+
             let root_id = resolve_root(&event.session_id, &parents);
             let group = groups
                 .entry(root_id.clone())
@@ -370,12 +400,11 @@ impl AccountRepository {
             if event.session_id != group.root_id {
                 group.child_ids.insert(event.session_id.clone());
             }
-            let event_tokens = event.tokens.total();
             if let Some(model) = event.model.as_deref() {
                 if !is_internal_review_model(model) {
                     *group.model_weights.entry(model.to_owned()).or_default() += event_tokens;
                 }
-                match catalog.estimate(model, event.occurred_at, &event.tokens) {
+                match estimated_cost {
                     Some(cost) => {
                         group.cost_usd += cost;
                         group.priced_tokens += event_tokens;
@@ -429,6 +458,9 @@ impl AccountRepository {
                 .cmp(&left.last_active_at)
                 .then_with(|| left.session_id.cmp(&right.session_id))
         });
+        let monthly_has_known_cost =
+            monthly_summary.priced_tokens > 0 || monthly_summary.tokens.total() == 0;
+        monthly_summary.equivalent_cost_usd = monthly_has_known_cost.then_some(monthly_cost_usd);
 
         let skipped_lines = connection.query_row(
             "SELECT COUNT(*) FROM session_source_files WHERE last_error IS NOT NULL",
@@ -442,6 +474,7 @@ impl AccountRepository {
         )?;
         Ok(LocalSessionView {
             sessions,
+            monthly_summary,
             diagnostics: SessionDiagnostics {
                 scanned_files,
                 skipped_lines,
@@ -456,6 +489,27 @@ impl AccountRepository {
             .lock()
             .map_err(|_| AppError::Unavailable("account database lock was poisoned".into()))
     }
+}
+
+fn local_month_bounds(now: i64) -> Result<(i64, i64), AppError> {
+    let local_now = Local
+        .timestamp_opt(now, 0)
+        .single()
+        .ok_or_else(|| AppError::Unavailable("无法确定本地月份".into()))?;
+    let start = Local
+        .with_ymd_and_hms(local_now.year(), local_now.month(), 1, 0, 0, 0)
+        .earliest()
+        .ok_or_else(|| AppError::Unavailable("无法确定本月起始时间".into()))?;
+    let (next_year, next_month) = if local_now.month() == 12 {
+        (local_now.year() + 1, 1)
+    } else {
+        (local_now.year(), local_now.month() + 1)
+    };
+    let end = Local
+        .with_ymd_and_hms(next_year, next_month, 1, 0, 0, 0)
+        .earliest()
+        .ok_or_else(|| AppError::Unavailable("无法确定下月起始时间".into()))?;
+    Ok((start.timestamp(), end.timestamp()))
 }
 
 #[derive(Debug)]
@@ -848,6 +902,40 @@ mod tests {
         assert!(session.equivalent_cost_usd.unwrap() > 0.0);
         assert_eq!(session.priced_tokens, 1_200);
         assert_eq!(session.unpriced_tokens, 350);
+    }
+
+    #[test]
+    fn monthly_summary_counts_only_events_in_the_local_calendar_month() {
+        let repository = AccountRepository::open_in_memory().unwrap();
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/priced-root.jsonl"),
+            "priced-root.jsonl",
+        );
+        let now = Local
+            .with_ymd_and_hms(2026, 7, 30, 12, 0, 0)
+            .single()
+            .unwrap()
+            .timestamp();
+
+        let july = repository.local_session_view(now).unwrap().monthly_summary;
+        assert_eq!(july.tokens.input_tokens, 1_000);
+        assert_eq!(july.tokens.output_tokens, 200);
+        assert_eq!(july.priced_tokens, 1_200);
+        assert!(july.equivalent_cost_usd.unwrap() > 0.0);
+
+        repository
+            .connection
+            .lock()
+            .unwrap()
+            .execute(
+                "UPDATE session_usage_events SET occurred_at = ?1",
+                [july.period_start - 1],
+            )
+            .unwrap();
+        let after_move = repository.local_session_view(now).unwrap().monthly_summary;
+        assert_eq!(after_move.tokens.total(), 0);
+        assert_eq!(after_move.equivalent_cost_usd, Some(0.0));
     }
 
     #[test]

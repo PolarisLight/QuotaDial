@@ -1,4 +1,4 @@
-import { ChartLineUp, CurrencyDollar, Gauge } from "@phosphor-icons/react";
+import { ChartLineUp, Gauge } from "@phosphor-icons/react";
 import type {
   AccountUsageView,
   ExhaustionForecast,
@@ -130,12 +130,6 @@ export function UsageForecastPanel({
           <strong>{copy.value}</strong>
           <small>{copy.note}</small>
         </div>
-      </div>
-
-      <div className="cost-note">
-        <CurrencyDollar size={16} />
-        <span>等效费用</span>
-        <strong>本机统计接入后显示</strong>
       </div>
     </section>
   );

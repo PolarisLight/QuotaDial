@@ -6,6 +6,7 @@ export interface AppSettings {
   paceMode: PaceMode;
   accountRefreshMins: 1 | 5 | 15;
   sessionScanMins: 5 | 10 | 30;
+  monthlySubscriptionUsd: number;
   launchAtLogin: boolean;
   quotaWarningEnabled: boolean;
   warningRemainingPercent: number;
@@ -21,6 +22,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   paceMode: "suggested",
   accountRefreshMins: 1,
   sessionScanMins: 10,
+  monthlySubscriptionUsd: 20,
   launchAtLogin: false,
   quotaWarningEnabled: true,
   warningRemainingPercent: 25,

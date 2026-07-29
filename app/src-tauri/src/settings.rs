@@ -24,6 +24,8 @@ pub struct AppSettings {
     pub pace_mode: PaceMode,
     pub account_refresh_mins: u64,
     pub session_scan_mins: u64,
+    #[serde(default = "default_monthly_subscription_usd")]
+    pub monthly_subscription_usd: f64,
     pub launch_at_login: bool,
     pub quota_warning_enabled: bool,
     pub warning_remaining_percent: u8,
@@ -34,6 +36,10 @@ pub struct AppSettings {
     pub stale_after_mins: u64,
 }
 
+fn default_monthly_subscription_usd() -> f64 {
+    20.0
+}
+
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
@@ -41,6 +47,7 @@ impl Default for AppSettings {
             pace_mode: PaceMode::Suggested,
             account_refresh_mins: 1,
             session_scan_mins: 10,
+            monthly_subscription_usd: default_monthly_subscription_usd(),
             launch_at_login: false,
             quota_warning_enabled: true,
             warning_remaining_percent: 25,
@@ -68,6 +75,12 @@ impl AppSettings {
         }
         if ![5, 10, 30].contains(&self.session_scan_mins) {
             return Err("会话扫描间隔无效".into());
+        }
+        if !self.monthly_subscription_usd.is_finite()
+            || self.monthly_subscription_usd <= 0.0
+            || self.monthly_subscription_usd > 10_000.0
+        {
+            return Err("月订阅价格无效".into());
         }
         if self.quota_warning_enabled
             && self.quota_critical_enabled

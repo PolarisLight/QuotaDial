@@ -1,5 +1,5 @@
 import { ArrowLeft, Bell, Monitor, Power, Timer } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppSettings } from "../types/settings";
 
 export function SettingsPage({
@@ -12,32 +12,53 @@ export function SettingsPage({
   onBack: () => void;
 }) {
   const [draft, setDraft] = useState(settings);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  useEffect(() => setDraft(settings), [settings]);
+  const [message, setMessage] = useState("已自动保存");
+  const draftRef = useRef(settings);
+  const saveQueue = useRef(Promise.resolve());
+  const revision = useRef(0);
+  useEffect(() => {
+    draftRef.current = settings;
+    setDraft(settings);
+  }, [settings]);
 
-  const patch = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
-    setDraft(current => ({ ...current, [key]: value }));
-
-  const save = async () => {
+  const validationMessage = (value: AppSettings) => {
     if (
-      draft.quotaWarningEnabled &&
-      draft.quotaCriticalEnabled &&
-      draft.criticalRemainingPercent >= draft.warningRemainingPercent
+      value.quotaWarningEnabled &&
+      value.quotaCriticalEnabled &&
+      value.criticalRemainingPercent >= value.warningRemainingPercent
     ) {
-      setMessage("紧急阈值必须低于提醒阈值");
+      return "紧急阈值必须低于提醒阈值";
+    }
+    return null;
+  };
+
+  const patch = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const previous = draftRef.current;
+    const next = { ...previous, [key]: value };
+    draftRef.current = next;
+    setDraft(next);
+    const invalid = validationMessage(next);
+    if (invalid) {
+      setMessage(invalid);
       return;
     }
-    setSaving(true);
-    setMessage(null);
-    try {
-      await onSave(draft);
-      setMessage("设置已保存");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setSaving(false);
-    }
+    const currentRevision = ++revision.current;
+    setMessage("正在保存…");
+    saveQueue.current = saveQueue.current
+      .catch(() => undefined)
+      .then(() => onSave(next))
+      .then(() => {
+        if (revision.current === currentRevision) setMessage("已自动保存");
+      })
+      .catch(error => {
+        if (revision.current === currentRevision) {
+          draftRef.current = previous;
+          setDraft(previous);
+          setMessage(
+            `保存失败：${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      });
   };
 
   return (
@@ -76,6 +97,23 @@ export function SettingsPage({
             <option value="suggested">配速建议</option>
             <option value="recentRate">近期消耗率</option>
           </select>
+        </SettingRow>
+        <SettingRow label="月订阅价格">
+          <label className="subscription-price">
+            <span>US$</span>
+            <input
+              aria-label="月订阅价格"
+              type="number"
+              min={0.01}
+              max={10_000}
+              step={1}
+              value={draft.monthlySubscriptionUsd}
+              onChange={event =>
+                patch("monthlySubscriptionUsd", Number(event.target.value))
+              }
+            />
+            <span>/月</span>
+          </label>
         </SettingRow>
       </SettingsSection>
 
@@ -152,15 +190,7 @@ export function SettingsPage({
       </SettingsSection>
 
       <div className="settings-save-row">
-        {message && <span role="status">{message}</span>}
-        <button
-          className="primary-button"
-          type="button"
-          disabled={saving}
-          onClick={() => void save()}
-        >
-          {saving ? "正在保存…" : "保存设置"}
-        </button>
+        <span role="status">{message}</span>
       </div>
     </div>
   );

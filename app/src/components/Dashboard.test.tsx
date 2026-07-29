@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import "../styles/app.css";
 import type { DashboardSnapshot } from "../types/dashboard";
@@ -79,6 +79,19 @@ const snapshot: DashboardSnapshot = {
   },
   localSessions: {
     sessions: [],
+    monthlySummary: {
+      periodStart: new Date(2026, 6, 1).getTime() / 1_000,
+      periodEnd: new Date(2026, 7, 1).getTime() / 1_000,
+      tokens: {
+        inputTokens: 1_300,
+        cachedInputTokens: 500,
+        outputTokens: 250,
+        reasoningOutputTokens: 50,
+      },
+      equivalentCostUsd: 0.42,
+      pricedTokens: 1_200,
+      unpricedTokens: 350,
+    },
     diagnostics: {
       scannedFiles: 0,
       skippedLines: 0,
@@ -256,6 +269,7 @@ describe("Dashboard", () => {
         snapshot={{
           ...snapshot,
           localSessions: {
+            monthlySummary: snapshot.localSessions.monthlySummary,
             diagnostics: {
               scannedFiles: 4,
               skippedLines: 0,
@@ -321,6 +335,7 @@ describe("Dashboard", () => {
           ...snapshot,
           localSessions: {
             sessions,
+            monthlySummary: snapshot.localSessions.monthlySummary,
             diagnostics: {
               scannedFiles: 12,
               skippedLines: 0,
@@ -368,7 +383,13 @@ describe("Dashboard", () => {
       },
     } as DashboardSnapshot);
 
-    expect(screen.getByText("≥ US$0.42")).toBeVisible();
+    const quotaCard = screen.getByRole("region", { name: "7 日额度" });
+    expect(quotaCard).toHaveTextContent("本月等效价值");
+    expect(within(quotaCard).getByText("≥ US$0.42")).toBeVisible();
+    expect(within(quotaCard).getByText("≥ 2.1%")).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Token 与额度趋势" }),
+    ).not.toHaveTextContent("等效费用");
     fireEvent.click(
       screen.getByRole("button", { name: /example-project · 7月29日/ }),
     );
@@ -448,18 +469,51 @@ describe("Dashboard", () => {
     expect(getComputedStyle(table).tableLayout).toBe("fixed");
   });
 
-  test("uses the native window as the only scroll boundary", () => {
-    renderDashboard();
+  test("keeps overview and settings in independent scroll containers", () => {
+    const { rerender } = render(
+      <DashboardView
+        snapshot={snapshot}
+        loading={false}
+        refreshing={false}
+        error={null}
+        destination="overview"
+        onRefresh={vi.fn()}
+      />,
+    );
     const frame = document.querySelector(".app-window")!;
     const content = document.querySelector(".content")!;
+    const overview = document.querySelector<HTMLElement>(
+      '[data-page="overview"]',
+    )!;
+    const settings = document.querySelector<HTMLElement>(
+      '[data-page="settings"]',
+    )!;
+    overview.scrollTop = 240;
 
     expect((frame as HTMLElement).style.width).toBe("100vw");
     expect((frame as HTMLElement).style.height).toBe("100vh");
     expect(frame).toHaveStyle({ margin: "0px", overflow: "hidden" });
-    expect(content).toHaveStyle({
+    expect(content).toHaveStyle({ overflow: "hidden" });
+    expect(overview).toHaveStyle({
       overflowY: "auto",
       overscrollBehaviorY: "none",
     });
+    expect(settings).not.toBeVisible();
+
+    rerender(
+      <DashboardView
+        snapshot={snapshot}
+        loading={false}
+        refreshing={false}
+        error={null}
+        destination="settings"
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    expect(settings).toBeVisible();
+    expect(settings.scrollTop).toBe(0);
+    expect(overview.scrollTop).toBe(240);
   });
 
   test("distinguishes import failure from a genuinely empty local history", () => {
@@ -467,6 +521,7 @@ describe("Dashboard", () => {
       ...snapshot,
       localSessions: {
         sessions: [],
+        monthlySummary: snapshot.localSessions.monthlySummary,
         diagnostics: {
           scannedFiles: 0,
           skippedLines: 0,

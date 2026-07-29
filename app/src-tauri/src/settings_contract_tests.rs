@@ -9,9 +9,21 @@ fn settings_defaults_match_the_product_contract() {
     assert_eq!(settings.pace_mode, PaceMode::Suggested);
     assert_eq!(settings.account_refresh_mins, 1);
     assert_eq!(settings.session_scan_mins, 10);
+    assert_eq!(settings.monthly_subscription_usd, 20.0);
     assert!(!settings.launch_at_login);
     assert_eq!(settings.warning_remaining_percent, 25);
     assert_eq!(settings.critical_remaining_percent, 10);
+}
+
+#[test]
+fn older_saved_settings_get_the_default_subscription_price() {
+    let mut value = serde_json::to_value(AppSettings::default()).unwrap();
+    value
+        .as_object_mut()
+        .unwrap()
+        .remove("monthlySubscriptionUsd");
+    let settings: AppSettings = serde_json::from_value(value).unwrap();
+    assert_eq!(settings.monthly_subscription_usd, 20.0);
 }
 
 #[test]
