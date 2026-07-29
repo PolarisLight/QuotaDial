@@ -16,7 +16,6 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::{broadcast, watch, Mutex};
 
-const REFRESH_INTERVAL_SECONDS: u64 = 60;
 const STALE_AFTER_SECONDS: i64 = 120;
 
 #[async_trait]
@@ -260,20 +259,34 @@ impl AccountMonitor {
         Ok(snapshot)
     }
 
-    pub async fn run(self: Arc<Self>, mut shutdown: watch::Receiver<bool>) {
+    pub async fn run(self: Arc<Self>, shutdown: watch::Receiver<bool>) {
+        let (_settings_runtime, settings) = {
+            let runtime = crate::settings::SettingsRuntime::new(Default::default());
+            let receiver = runtime.subscribe();
+            (runtime, receiver)
+        };
+        self.run_with_settings(shutdown, settings).await;
+    }
+
+    pub async fn run_with_settings(
+        self: Arc<Self>,
+        mut shutdown: watch::Receiver<bool>,
+        mut settings: watch::Receiver<crate::settings::AppSettings>,
+    ) {
         let mut notifications = self.source.subscribe();
-        let start =
-            tokio::time::Instant::now() + std::time::Duration::from_secs(REFRESH_INTERVAL_SECONDS);
-        let mut interval = tokio::time::interval_at(
-            start,
-            std::time::Duration::from_secs(REFRESH_INTERVAL_SECONDS),
-        );
         let _ = self.refresh().await;
 
         loop {
+            let delay = tokio::time::sleep(settings.borrow().account_refresh_duration());
+            tokio::pin!(delay);
             tokio::select! {
-                _ = interval.tick() => {
+                _ = &mut delay => {
                     let _ = self.refresh().await;
+                }
+                changed = settings.changed() => {
+                    if changed.is_err() {
+                        break;
+                    }
                 }
                 notification = notifications.recv() => {
                     match notification {

@@ -4,6 +4,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../../migrations/001_account.sql")),
     (2, include_str!("../../migrations/002_sessions.sql")),
+    (3, include_str!("../../migrations/003_settings.sql")),
 ];
 
 pub fn run(connection: &mut Connection) -> Result<(), AppError> {

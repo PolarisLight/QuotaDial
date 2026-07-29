@@ -154,7 +154,7 @@ pub fn build(
     let show_sessions = MenuItem::with_id(app, "sessions", "查看最近会话", true, None::<&str>)?;
     let refresh = MenuItem::with_id(app, "refresh", "立即刷新", true, None::<&str>)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    let settings = MenuItem::with_id(app, "settings", "设置（稍后）", false, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出 Codex Monitor", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
@@ -208,6 +208,10 @@ pub fn build(
                     let _ = tokio::join!(monitor.refresh(), sessions.rescan());
                     let _ = refresh.set_enabled(true);
                 });
+            }
+            "settings" => {
+                show_main_window(app);
+                let _ = app.emit("dashboard://open-settings", ());
             }
             "quit" => app.exit(0),
             _ => {}

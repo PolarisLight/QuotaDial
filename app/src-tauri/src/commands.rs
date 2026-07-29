@@ -2,6 +2,8 @@ use crate::{
     domain::{dashboard::DashboardSnapshot, session::LocalSessionView},
     monitor::AccountMonitor,
     sessions::service::SessionService,
+    settings::{AppSettings, SettingsRuntime},
+    storage::repository::AccountRepository,
 };
 use std::sync::Arc;
 use tokio::sync::watch;
@@ -9,7 +11,40 @@ use tokio::sync::watch;
 pub struct AppState {
     pub monitor: Arc<AccountMonitor>,
     pub sessions: Arc<SessionService>,
+    pub repository: Arc<AccountRepository>,
+    pub settings: SettingsRuntime,
     pub shutdown: watch::Sender<bool>,
+}
+
+#[tauri::command]
+pub fn get_app_settings(state: tauri::State<'_, AppState>) -> AppSettings {
+    state.settings.current()
+}
+
+#[tauri::command]
+pub fn save_app_settings(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    settings: AppSettings,
+) -> Result<AppSettings, String> {
+    use tauri_plugin_autostart::ManagerExt;
+
+    settings.validate()?;
+    let autolaunch = app.autolaunch();
+    let autolaunch_enabled = autolaunch.is_enabled().map_err(|error| error.to_string())?;
+    if settings.launch_at_login != autolaunch_enabled {
+        if settings.launch_at_login {
+            autolaunch.enable().map_err(|error| error.to_string())?;
+        } else {
+            autolaunch.disable().map_err(|error| error.to_string())?;
+        }
+    }
+    state
+        .repository
+        .save_settings(&settings)
+        .map_err(|error| error.to_string())?;
+    state.settings.update(settings.clone());
+    Ok(settings)
 }
 
 #[tauri::command]

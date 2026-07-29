@@ -9,6 +9,7 @@ use crate::{
         parser::{ParsedFile, ParsedSessionMetadata},
         pricing::PriceCatalog,
     },
+    settings::AppSettings,
 };
 use rusqlite::{params, Connection, OptionalExtension};
 use std::{
@@ -63,6 +64,58 @@ impl AccountRepository {
         Ok(Self {
             connection: Mutex::new(connection),
         })
+    }
+
+    pub fn load_settings(&self) -> Result<AppSettings, AppError> {
+        let payload = self
+            .lock()?
+            .query_row(
+                "SELECT payload_json FROM app_settings WHERE singleton = 1",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        payload
+            .map(|value| serde_json::from_str(&value).map_err(AppError::from))
+            .unwrap_or_else(|| Ok(AppSettings::default()))
+    }
+
+    pub fn save_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
+        settings.validate().map_err(AppError::Unavailable)?;
+        self.lock()?.execute(
+            "INSERT INTO app_settings(singleton, payload_json, updated_at)
+             VALUES (1, ?1, unixepoch())
+             ON CONFLICT(singleton) DO UPDATE SET
+               payload_json = excluded.payload_json,
+               updated_at = excluded.updated_at",
+            [serde_json::to_string(settings)?],
+        )?;
+        Ok(())
+    }
+
+    pub fn notification_was_delivered(&self, key: &str) -> Result<bool, AppError> {
+        Ok(self
+            .lock()?
+            .query_row(
+                "SELECT 1 FROM notification_delivery_state WHERE state_key = ?1",
+                [key],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some())
+    }
+
+    pub fn mark_notification_delivered(
+        &self,
+        key: &str,
+        delivered_at: i64,
+    ) -> Result<(), AppError> {
+        self.lock()?.execute(
+            "INSERT OR IGNORE INTO notification_delivery_state(state_key, delivered_at)
+             VALUES (?1, ?2)",
+            params![key, delivered_at],
+        )?;
+        Ok(())
     }
 
     pub fn insert_rate_limits(

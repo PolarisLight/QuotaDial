@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { DashboardSnapshot, LocalSessionView } from "../types/dashboard";
+import {
+  DEFAULT_APP_SETTINGS,
+  type AppSettings,
+} from "../types/settings";
 
 const PREVIEW_DAY_SECONDS = 86_400;
 const previewNow = Math.floor(Date.now() / 1_000);
@@ -128,6 +132,16 @@ function isWebPreview() {
   );
 }
 
+function previewSettings() {
+  const value = localStorage.getItem("codex-monitor-preview-settings");
+  if (!value) return DEFAULT_APP_SETTINGS;
+  try {
+    return { ...DEFAULT_APP_SETTINGS, ...JSON.parse(value) } as AppSettings;
+  } catch {
+    return DEFAULT_APP_SETTINGS;
+  }
+}
+
 export const backend = {
   getDashboardSnapshot: () => {
     if (isWebPreview()) {
@@ -150,6 +164,24 @@ export const backend = {
     }
     return invoke<LocalSessionView>("rescan_sessions");
   },
+  getAppSettings: () => {
+    if (isWebPreview()) return Promise.resolve(previewSettings());
+    return invoke<AppSettings>("get_app_settings");
+  },
+  saveAppSettings: (settings: AppSettings) => {
+    if (isWebPreview()) {
+      localStorage.setItem(
+        "codex-monitor-preview-settings",
+        JSON.stringify(settings),
+      );
+      return Promise.resolve(settings);
+    }
+    return invoke<AppSettings>("save_app_settings", { settings });
+  },
+  getAppVersion: () => {
+    if (isWebPreview()) return Promise.resolve("0.1.0");
+    return import("@tauri-apps/api/app").then(module => module.getVersion());
+  },
   onDashboardUpdated: (
     handler: (snapshot: DashboardSnapshot) => void,
   ): Promise<UnlistenFn> => {
@@ -167,5 +199,9 @@ export const backend = {
     return listen<string>("dashboard://focus-section", event =>
       handler(event.payload),
     );
+  },
+  onOpenSettings: (handler: () => void): Promise<UnlistenFn> => {
+    if (isWebPreview()) return Promise.resolve(() => undefined);
+    return listen("dashboard://open-settings", handler);
   },
 };

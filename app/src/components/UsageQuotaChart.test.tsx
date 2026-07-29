@@ -43,6 +43,7 @@ describe("UsageQuotaChart", () => {
           sampleCount: 3,
         }}
         quota={quota}
+        mode="recentRate"
       />,
     );
 
@@ -61,7 +62,7 @@ describe("UsageQuotaChart", () => {
     expect(yCoordinates[1]).toBeGreaterThan(yCoordinates[0]);
     expect(yCoordinates[2]).toBeGreaterThan(yCoordinates[1]);
     expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(1);
-    expect(screen.getByText("正常 · 15.0%/天")).toBeVisible();
+    expect(screen.getByText("近期消耗率 · 15.0%/天")).toBeVisible();
     expect(screen.getByText("剩余额度")).toBeVisible();
   });
 
@@ -72,6 +73,7 @@ describe("UsageQuotaChart", () => {
         history={[{ observedAt: start, remainingPercent: 82 }]}
         pace={null}
         quota={quota}
+        mode="recentRate"
       />,
     );
 
@@ -93,9 +95,10 @@ describe("UsageQuotaChart", () => {
           sampleCount: 4,
         }}
         quota={quota}
+        mode="recentRate"
       />,
     );
-    expect(screen.getByText("偏慢 · 10.0%/天")).toBeVisible();
+    expect(screen.getByText("近期消耗率 · 10.0%/天")).toBeVisible();
 
     rerender(
       <UsageQuotaChart
@@ -108,9 +111,10 @@ describe("UsageQuotaChart", () => {
           sampleCount: 4,
         }}
         quota={quota}
+        mode="recentRate"
       />,
     );
-    expect(screen.getByText("过快 · 18.0%/天")).toBeVisible();
+    expect(screen.getByText("近期消耗率 · 18.0%/天")).toBeVisible();
   });
 
   test("keeps the reset calendar day as the first label and token bar", () => {

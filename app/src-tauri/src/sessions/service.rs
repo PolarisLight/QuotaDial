@@ -52,7 +52,20 @@ impl SessionService {
         Ok(view)
     }
 
-    pub async fn run(self: Arc<Self>, mut shutdown: watch::Receiver<bool>) {
+    pub async fn run(self: Arc<Self>, shutdown: watch::Receiver<bool>) {
+        let (_settings_runtime, settings) = {
+            let runtime = crate::settings::SettingsRuntime::new(Default::default());
+            let receiver = runtime.subscribe();
+            (runtime, receiver)
+        };
+        self.run_with_settings(shutdown, settings).await;
+    }
+
+    pub async fn run_with_settings(
+        self: Arc<Self>,
+        mut shutdown: watch::Receiver<bool>,
+        mut settings: watch::Receiver<crate::settings::AppSettings>,
+    ) {
         let _ = self.rescan().await;
         let (event_sender, mut event_receiver) = mpsc::unbounded_channel();
         let mut watcher =
@@ -71,12 +84,17 @@ impl SessionService {
             }
         }
 
-        let mut interval = tokio::time::interval(Duration::from_secs(600));
-        interval.tick().await;
         loop {
+            let delay = tokio::time::sleep(settings.borrow().session_scan_duration());
+            tokio::pin!(delay);
             tokio::select! {
-                _ = interval.tick() => {
+                _ = &mut delay => {
                     let _ = self.rescan().await;
+                }
+                changed = settings.changed() => {
+                    if changed.is_err() {
+                        break;
+                    }
                 }
                 event = event_receiver.recv() => {
                     if event.is_some() {

@@ -6,6 +6,7 @@ import type {
   QuotaPace,
   QuotaView,
 } from "../types/dashboard";
+import type { PaceMode } from "../types/settings";
 import { UsageQuotaChart } from "./UsageQuotaChart";
 
 interface UsageForecastPanelProps {
@@ -15,6 +16,9 @@ interface UsageForecastPanelProps {
   history: QuotaHistoryPoint[];
   pace: QuotaPace | null;
   quota: QuotaView | null;
+  observedAt: number;
+  paceMode: PaceMode;
+  onPaceModeChange: (mode: PaceMode) => void;
 }
 
 const tokenFormatter = new Intl.NumberFormat("zh-CN", {
@@ -61,6 +65,9 @@ export function UsageForecastPanel({
   history,
   pace,
   quota,
+  observedAt,
+  paceMode,
+  onPaceModeChange,
 }: UsageForecastPanelProps) {
   const copy = forecastCopy(forecast);
   const dailyBuckets = usage?.dailyUsageBuckets ?? [];
@@ -99,6 +106,9 @@ export function UsageForecastPanel({
             history={history}
             pace={pace}
             quota={quota}
+            observedAt={observedAt}
+            mode={paceMode}
+            onModeChange={onPaceModeChange}
           />
         </>
       ) : (

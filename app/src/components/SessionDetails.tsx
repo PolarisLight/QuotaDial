@@ -6,6 +6,10 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { backend } from "../lib/backend";
+import {
+  sortSessions,
+  type SessionSort,
+} from "../lib/sessionSort";
 import type {
   LocalSessionView,
   SessionSummary,
@@ -50,6 +54,8 @@ function projectName(path: string | null) {
 export function SessionDetails({ view }: SessionDetailsProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
+  const [sort, setSort] = useState<SessionSort>("recent");
+  const sessions = sortSessions(view.sessions, sort);
 
   const rescan = async () => {
     setRescanning(true);
@@ -72,9 +78,23 @@ export function SessionDetails({ view }: SessionDetailsProps) {
           <h2 id="sessions-heading">会话详情</h2>
         </div>
         {view.sessions.length > 0 && (
-          <span className="session-scan-time">
-            {view.sessions.length} 个会话
-          </span>
+          <div className="session-heading-actions">
+            <span className="session-scan-time">
+              {view.sessions.length} 个会话
+            </span>
+            <label className="session-sort">
+              <span>排序</span>
+              <select
+                aria-label="会话排序"
+                value={sort}
+                onChange={event => setSort(event.target.value as SessionSort)}
+              >
+                <option value="recent">最近活动</option>
+                <option value="tokensDesc">Token 最多</option>
+                <option value="tokensAsc">Token 最少</option>
+              </select>
+            </label>
+          </div>
         )}
       </div>
 
@@ -122,7 +142,7 @@ export function SessionDetails({ view }: SessionDetailsProps) {
               </tr>
             </thead>
             <tbody>
-              {view.sessions.map(session => (
+              {sessions.map(session => (
                 <SessionRow
                   key={session.sessionId}
                   session={session}

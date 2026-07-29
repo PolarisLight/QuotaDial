@@ -3,12 +3,17 @@ import type {
   QuotaPace,
   QuotaView,
 } from "../types/dashboard";
+import { recentRateCopy, suggestedPace } from "../lib/pace";
+import type { PaceMode } from "../types/settings";
 
 interface UsageQuotaChartProps {
   buckets: Array<{ startDate: string; tokens: number }>;
   history: QuotaHistoryPoint[];
   pace: QuotaPace | null;
   quota: QuotaView | null;
+  observedAt?: number;
+  mode?: PaceMode;
+  onModeChange?: (mode: PaceMode) => void;
 }
 
 const WIDTH = 700;
@@ -75,13 +80,6 @@ function quotaY(remainingPercent: number) {
   return TOP + (1 - clampPercent(remainingPercent) / 100) * PLOT_HEIGHT;
 }
 
-function paceCopy(pace: QuotaPace | null) {
-  if (!pace) return "正在积累额度样本";
-  const label =
-    pace.status === "fast" ? "过快" : pace.status === "slow" ? "偏慢" : "正常";
-  return `${label} · ${pace.percentPerDay.toFixed(1)}%/天`;
-}
-
 function idealRemainingAt(
   timestamp: number,
   periodStart: number,
@@ -117,6 +115,9 @@ export function UsageQuotaChart({
   history,
   pace,
   quota,
+  observedAt = Math.floor(Date.now() / 1_000),
+  mode = "suggested",
+  onModeChange = () => undefined,
 }: UsageQuotaChartProps) {
   const visibleBuckets = buckets.slice(-7);
   const firstDate = visibleBuckets.at(0)?.startDate;
@@ -206,6 +207,20 @@ export function UsageQuotaChart({
       : [];
   const remainingPath =
     quotaPoints.length >= 2 ? smoothPath(quotaPoints) : null;
+  const guidance =
+    quota === null
+      ? null
+      : suggestedPace({
+          remainingPercent: quota.remainingPercent,
+          observedAt,
+          periodStart: quota.resetsAt - quota.windowDurationMins * 60,
+          resetsAt: quota.resetsAt,
+        });
+  const paceStatus = mode === "suggested" ? guidance?.status : pace?.status;
+  const paceText =
+    mode === "suggested"
+      ? guidance?.copy ?? "正在读取额度周期"
+      : recentRateCopy(pace);
 
   const idealRate =
     pace?.idealPercentPerDay ??
@@ -244,9 +259,27 @@ export function UsageQuotaChart({
     >
       <div className="usage-chart-toolbar">
         <span>当前额度周期</span>
-        <strong className={`quota-pace-pill ${pace?.status ?? "pending"}`}>
-          {paceCopy(pace)}
-        </strong>
+        <div className="pace-toolbar-actions">
+          <div className="pace-mode-control" aria-label="节奏指标">
+            <button
+              type="button"
+              aria-pressed={mode === "suggested"}
+              onClick={() => onModeChange("suggested")}
+            >
+              配速建议
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "recentRate"}
+              onClick={() => onModeChange("recentRate")}
+            >
+              近期消耗率
+            </button>
+          </div>
+          <strong className={`quota-pace-pill ${paceStatus ?? "pending"}`}>
+            {paceText}
+          </strong>
+        </div>
       </div>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img">
         <title>最近 7 日 Token 柱形与剩余额度折线</title>
