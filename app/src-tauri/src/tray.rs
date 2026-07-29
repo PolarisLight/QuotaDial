@@ -7,6 +7,7 @@ use crate::{
 };
 use std::sync::Arc;
 use tauri::{
+    image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIcon, TrayIconBuilder},
     AppHandle, Emitter, Manager,
@@ -29,6 +30,10 @@ pub fn tray_dial_state(snapshot: &DashboardSnapshot) -> TrayDialState {
             .map(|quota| quota.used_percent as f32),
         stale: snapshot.is_stale,
     }
+}
+
+fn live_tray_icon(state: TrayDialState) -> (Image<'static>, bool) {
+    (render_tray_icon(state, 44), true)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -174,16 +179,14 @@ pub fn build(
     let menu_monitor = monitor.clone();
     let menu_sessions = session_service.clone();
     let refresh_item = refresh.clone();
+    let (initial_icon, initial_as_template) = live_tray_icon(TrayDialState {
+        used_percent: None,
+        stale: false,
+    });
 
     let tray = TrayIconBuilder::with_id("codex-monitor")
-        .icon(render_tray_icon(
-            TrayDialState {
-                used_percent: None,
-                stale: false,
-            },
-            44,
-        ))
-        .icon_as_template(true)
+        .icon(initial_icon)
+        .icon_as_template(initial_as_template)
         .tooltip("Codex Monitor")
         .title(tray_title(None, false))
         .menu(&menu)
@@ -229,7 +232,8 @@ pub fn build(
                 .as_ref()
                 .map(|quota| quota.remaining_percent);
             let title = tray_title(remaining, snapshot.is_stale);
-            let _ = tray_updates.set_icon(Some(render_tray_icon(tray_dial_state(&snapshot), 44)));
+            let (icon, as_template) = live_tray_icon(tray_dial_state(&snapshot));
+            let _ = tray_updates.set_icon_with_as_template(Some(icon), as_template);
             let tooltip = match remaining {
                 Some(value) => format!("Codex Monitor · 剩余 {value:.0}%"),
                 None => "Codex Monitor · 额度暂不可用".into(),
@@ -356,6 +360,18 @@ mod tests {
                 stale: true,
             }
         );
+    }
+
+    #[test]
+    fn live_icon_updates_remain_macos_templates() {
+        let (image, as_template) = live_tray_icon(TrayDialState {
+            used_percent: Some(25.0),
+            stale: false,
+        });
+
+        assert_eq!(image.width(), 44);
+        assert_eq!(image.height(), 44);
+        assert!(as_template);
     }
 
     #[test]
