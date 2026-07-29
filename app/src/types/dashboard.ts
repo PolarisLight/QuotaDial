@@ -31,6 +31,36 @@ export interface ExhaustionForecast {
   spanSeconds: number;
 }
 
+export interface TokenBreakdown {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+}
+
+export interface SessionSummary {
+  sessionId: string;
+  title: string;
+  projectPath: string | null;
+  lastActiveAt: number;
+  primaryModel: string | null;
+  tokens: TokenBreakdown;
+  equivalentCostUsd: number | null;
+  childSessionCount: number;
+}
+
+export interface SessionDiagnostics {
+  scannedFiles: number;
+  skippedLines: number;
+  lastImportedAt: number | null;
+  lastError: string | null;
+}
+
+export interface LocalSessionView {
+  sessions: SessionSummary[];
+  diagnostics: SessionDiagnostics;
+}
+
 export interface DashboardSnapshot {
   observedAt: number;
   isStale: boolean;
@@ -40,5 +70,5 @@ export interface DashboardSnapshot {
   otherQuotas: QuotaView[];
   accountUsage: AccountUsageView | null;
   forecast: ExhaustionForecast | null;
-  sessionDetailsAvailable: boolean;
+  localSessions: LocalSessionView;
 }

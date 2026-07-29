@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { DashboardSnapshot } from "../types/dashboard";
+import type { DashboardSnapshot, LocalSessionView } from "../types/dashboard";
 
 const previewSnapshot: DashboardSnapshot = {
   observedAt: Math.floor(Date.now() / 1_000),
@@ -39,7 +39,46 @@ const previewSnapshot: DashboardSnapshot = {
     sampleCount: 6,
     spanSeconds: 10_800,
   },
-  sessionDetailsAvailable: false,
+  localSessions: {
+    sessions: [
+      {
+        sessionId: "preview-session-1",
+        title: "codex-monitor · 7月29日",
+        projectPath: "/Users/demo/Projects/codex-monitor",
+        lastActiveAt: Math.floor(Date.now() / 1_000) - 320,
+        primaryModel: "gpt-5.6-terra",
+        tokens: {
+          inputTokens: 184_200,
+          cachedInputTokens: 122_000,
+          outputTokens: 23_400,
+          reasoningOutputTokens: 8_900,
+        },
+        equivalentCostUsd: 0.49,
+        childSessionCount: 2,
+      },
+      {
+        sessionId: "preview-session-2",
+        title: "research-notes · 7月29日",
+        projectPath: "/Users/demo/Research/research-notes",
+        lastActiveAt: Math.floor(Date.now() / 1_000) - 2_400,
+        primaryModel: "gpt-5.6-sol",
+        tokens: {
+          inputTokens: 91_500,
+          cachedInputTokens: 50_300,
+          outputTokens: 14_800,
+          reasoningOutputTokens: 5_200,
+        },
+        equivalentCostUsd: 0.67,
+        childSessionCount: 0,
+      },
+    ],
+    diagnostics: {
+      scannedFiles: 8,
+      skippedLines: 0,
+      lastImportedAt: Math.floor(Date.now() / 1_000),
+      lastError: null,
+    },
+  },
 };
 
 function isWebPreview() {
@@ -65,6 +104,12 @@ export const backend = {
       });
     }
     return invoke<DashboardSnapshot>("refresh_account");
+  },
+  rescanSessions: () => {
+    if (isWebPreview()) {
+      return Promise.resolve(previewSnapshot.localSessions);
+    }
+    return invoke<LocalSessionView>("rescan_sessions");
   },
   onDashboardUpdated: (
     handler: (snapshot: DashboardSnapshot) => void,

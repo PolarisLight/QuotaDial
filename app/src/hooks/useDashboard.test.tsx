@@ -30,7 +30,15 @@ const snapshot: DashboardSnapshot = {
   otherQuotas: [],
   accountUsage: null,
   forecast: null,
-  sessionDetailsAvailable: false,
+  localSessions: {
+    sessions: [],
+    diagnostics: {
+      scannedFiles: 0,
+      skippedLines: 0,
+      lastImportedAt: null,
+      lastError: null,
+    },
+  },
 };
 
 const mockedBackend = vi.mocked(backend);

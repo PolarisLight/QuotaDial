@@ -40,7 +40,15 @@ const snapshot: DashboardSnapshot = {
     sampleCount: 6,
     spanSeconds: 10_800,
   },
-  sessionDetailsAvailable: false,
+  localSessions: {
+    sessions: [],
+    diagnostics: {
+      scannedFiles: 0,
+      skippedLines: 0,
+      lastImportedAt: null,
+      lastError: null,
+    },
+  },
 };
 
 function renderDashboard(value = snapshot, onRefresh = vi.fn()) {
@@ -161,10 +169,65 @@ describe("Dashboard", () => {
     expect(screen.getByText("07/29")).toBeVisible();
   });
 
-  test("does not fabricate session rows in phase one", () => {
-    renderDashboard();
+  test("renders one row per top-level session with child usage already included", () => {
+    const { container } = render(
+      <DashboardView
+        snapshot={{
+          ...snapshot,
+          localSessions: {
+            diagnostics: {
+              scannedFiles: 4,
+              skippedLines: 0,
+              lastImportedAt: 1_785_330_000,
+              lastError: null,
+            },
+            sessions: [
+              {
+                sessionId: "root-1",
+                title: "example-project · 7月29日",
+                projectPath: "/tmp/example-project",
+                lastActiveAt: 1_785_330_000,
+                primaryModel: "gpt-5.6-codex",
+                tokens: {
+                  inputTokens: 1_300,
+                  cachedInputTokens: 500,
+                  outputTokens: 280,
+                  reasoningOutputTokens: 70,
+                },
+                equivalentCostUsd: 0.02,
+                childSessionCount: 1,
+              },
+            ],
+          },
+        } as DashboardSnapshot}
+        loading={false}
+        refreshing={false}
+        error={null}
+        onRefresh={vi.fn()}
+      />,
+    );
 
-    expect(screen.getByText("本机数据接入后显示")).toBeVisible();
-    expect(screen.queryByRole("row")).not.toBeInTheDocument();
+    expect(screen.getByText("example-project · 7月29日")).toBeVisible();
+    expect(container.querySelectorAll("tbody .session-row")).toHaveLength(1);
+    expect(screen.getByText("含 1 个子任务")).toBeVisible();
+    expect(screen.queryByText("根会话")).not.toBeInTheDocument();
+  });
+
+  test("distinguishes import failure from a genuinely empty local history", () => {
+    renderDashboard({
+      ...snapshot,
+      localSessions: {
+        sessions: [],
+        diagnostics: {
+          scannedFiles: 0,
+          skippedLines: 0,
+          lastImportedAt: null,
+          lastError: "permission denied",
+        },
+      },
+    } as DashboardSnapshot);
+
+    expect(screen.getByText("无法读取本机会话记录")).toBeVisible();
+    expect(screen.getByRole("button", { name: "重新扫描" })).toBeVisible();
   });
 });

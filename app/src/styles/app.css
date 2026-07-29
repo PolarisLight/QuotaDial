@@ -514,6 +514,132 @@ h2 {
   padding: 22px 23px;
 }
 
+.session-scan-time {
+  color: var(--subtle);
+  font-size: 10px;
+}
+
+.session-table-wrap {
+  margin-top: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+.session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.session-table th {
+  padding: 10px 12px;
+  color: var(--subtle);
+  background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
+  font-size: 9px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.session-table td {
+  padding: 11px 12px;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.session-row:hover td {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.session-title-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+
+.session-title-button svg {
+  flex: 0 0 auto;
+  color: var(--subtle);
+  transition: transform 160ms ease;
+}
+
+.session-title-button svg.expanded {
+  transform: rotate(180deg);
+}
+
+.session-title-button strong,
+.session-title-button small {
+  display: block;
+}
+
+.session-title-button strong {
+  max-width: 230px;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+.session-title-button small {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 6px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  font-size: 8px;
+}
+
+.session-secondary {
+  color: var(--muted);
+}
+
+.session-detail-row td {
+  padding: 0;
+  background: color-mix(in srgb, var(--surface-raised) 74%, transparent);
+}
+
+.session-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px 34px;
+}
+
+.session-breakdown div {
+  min-width: 0;
+}
+
+.session-breakdown dt {
+  color: var(--subtle);
+  font-size: 8px;
+}
+
+.session-breakdown dd {
+  margin: 4px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.session-breakdown .session-path {
+  grid-column: 1 / -1;
+}
+
+.session-path dd {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .session-empty {
   display: flex;
   align-items: center;
@@ -524,6 +650,52 @@ h2 {
   background: color-mix(in srgb, var(--surface-raised) 75%, transparent);
   border: 1px dashed var(--line-strong);
   border-radius: 13px;
+}
+
+.session-error {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 88px;
+  margin-top: 18px;
+  padding: 16px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface-raised));
+  border: 1px solid color-mix(in srgb, var(--warning) 22%, var(--line));
+  border-radius: 13px;
+}
+
+.session-error > div {
+  min-width: 0;
+}
+
+.session-error strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.session-error p {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 7px 10px;
+  color: var(--text);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 9px;
+  white-space: nowrap;
 }
 
 .session-empty-icon {
@@ -764,6 +936,19 @@ h2 {
   .quota-card,
   .usage-panel {
     min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .session-table th:nth-child(2),
+  .session-table th:nth-child(3),
+  .session-row td:nth-child(2),
+  .session-row td:nth-child(3) {
+    display: none;
+  }
+
+  .session-breakdown {
+    grid-template-columns: repeat(2, minmax(90px, 1fr));
   }
 }
 

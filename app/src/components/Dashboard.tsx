@@ -75,7 +75,7 @@ export function DashboardView({
                 forecast={snapshot.forecast}
               />
             </section>
-            <SessionDetails />
+            <SessionDetails view={snapshot.localSessions} />
           </>
         )}
       </main>
