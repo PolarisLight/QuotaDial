@@ -136,10 +136,7 @@ pub fn parse_reader_with_context(
                 current_session_id = Some(session_id.to_owned());
                 metadata = Some(ParsedSessionMetadata {
                     session_id: session_id.to_owned(),
-                    parent_session_id: payload
-                        .pointer("/source/subagent/thread_spawn/parent_thread_id")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned),
+                    parent_session_id: parent_session_id(payload, session_id),
                     title: generated_title(cwd.as_deref(), started_at),
                     started_at,
                     last_active_at: started_at,
@@ -219,6 +216,23 @@ pub fn parse_reader_with_context(
     })
 }
 
+fn parent_session_id(payload: &Value, session_id: &str) -> Option<String> {
+    payload
+        .pointer("/source/subagent/thread_spawn/parent_thread_id")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            let is_guardian = payload
+                .pointer("/source/subagent/other")
+                .and_then(Value::as_str)
+                == Some("guardian");
+            let owner = payload.get("session_id").and_then(Value::as_str);
+            (is_guardian && owner != Some(session_id))
+                .then_some(owner)
+                .flatten()
+        })
+        .map(str::to_owned)
+}
+
 fn parse_timestamp(value: Option<&str>) -> i64 {
     value
         .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
@@ -285,6 +299,24 @@ mod tests {
         assert!(!serde_json::to_string(&parsed)
             .unwrap()
             .contains("agent_nickname"));
+    }
+
+    #[test]
+    fn maps_guardian_session_to_the_user_session_id() {
+        let parsed = parse_reader(
+            include_bytes!("../../tests/fixtures/sessions/guardian.jsonl").as_slice(),
+            "guardian.jsonl",
+            0,
+        )
+        .unwrap();
+
+        let metadata = parsed.metadata.unwrap();
+        assert_eq!(metadata.session_id, "guardian-1");
+        assert_eq!(metadata.parent_session_id.as_deref(), Some("root-1"));
+        assert_eq!(
+            parsed.events[0].model.as_deref(),
+            Some("codex-auto-review")
+        );
     }
 
     #[test]
