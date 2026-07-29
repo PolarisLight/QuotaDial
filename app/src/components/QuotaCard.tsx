@@ -30,6 +30,10 @@ export function QuotaCard({
   refreshing,
   onRefresh,
 }: QuotaCardProps) {
+  const usedPercent = Math.min(100, Math.max(0, quota.usedPercent));
+  const quotaState =
+    usedPercent >= 90 ? "critical" : usedPercent >= 70 ? "warning" : "";
+
   return (
     <section className="panel quota-card" aria-labelledby="quota-heading">
       <div className="panel-heading">
@@ -57,14 +61,18 @@ export function QuotaCard({
       </div>
 
       <div
-        className="quota-track"
-        aria-label={`已使用 ${Math.round(quota.usedPercent)}%`}
+        className={`quota-track ${quotaState}`}
+        role="progressbar"
+        aria-label={`已消耗 ${Math.round(usedPercent)}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={usedPercent}
       >
-        <span style={{ width: `${quota.usedPercent}%` }} />
+        <span style={{ width: `${usedPercent}%` }} />
       </div>
       <div className="quota-scale">
-        <span>已使用 {Math.round(quota.usedPercent)}%</span>
-        <span>上限 100%</span>
+        <span>已消耗 {Math.round(usedPercent)}%</span>
+        <span>剩余 {Math.round(quota.remainingPercent)}%</span>
       </div>
 
       <dl className="quota-meta">

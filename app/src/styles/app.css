@@ -328,6 +328,14 @@ h2 {
   border-radius: inherit;
 }
 
+.quota-track.warning span {
+  background: var(--warning);
+}
+
+.quota-track.critical span {
+  background: var(--danger);
+}
+
 .quota-scale {
   display: flex;
   justify-content: space-between;

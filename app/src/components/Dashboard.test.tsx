@@ -169,6 +169,30 @@ describe("Dashboard", () => {
     expect(screen.getByText("07/29")).toBeVisible();
   });
 
+  test("fills the quota bar left to right using consumed percentage", () => {
+    const { container } = render(
+      <DashboardView
+        snapshot={{
+          ...snapshot,
+          primaryQuota: {
+            ...snapshot.primaryQuota!,
+            usedPercent: 25,
+            remainingPercent: 75,
+          },
+        }}
+        loading={false}
+        refreshing={false}
+        error={null}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    const fill = container.querySelector<HTMLElement>(".quota-track > span");
+    expect(fill).toHaveStyle({ width: "25%" });
+    expect(screen.getByText("已消耗 25%")).toBeVisible();
+    expect(screen.getByText("剩余 75%")).toBeVisible();
+  });
+
   test("renders one row per top-level session with child usage already included", () => {
     const { container } = render(
       <DashboardView
