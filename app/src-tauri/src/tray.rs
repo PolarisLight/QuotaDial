@@ -1,10 +1,12 @@
 use crate::{
-    domain::dashboard::DashboardSnapshot, forecast::ForecastStatus, monitor::AccountMonitor,
+    domain::dashboard::DashboardSnapshot,
+    forecast::ForecastStatus,
+    monitor::AccountMonitor,
     sessions::service::SessionService,
+    tray_icon::{render_tray_icon, TrayDialState},
 };
 use std::sync::Arc;
 use tauri::{
-    image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIcon, TrayIconBuilder},
     AppHandle, Emitter, Manager,
@@ -16,6 +18,16 @@ pub fn tray_title(remaining_percent: Option<f64>, stale: bool) -> String {
         Some(remaining) => format!("{remaining:.0}%"),
         None if stale => "Codex?".into(),
         None => "Codex".into(),
+    }
+}
+
+pub fn tray_dial_state(snapshot: &DashboardSnapshot) -> TrayDialState {
+    TrayDialState {
+        used_percent: snapshot
+            .primary_quota
+            .as_ref()
+            .map(|quota| quota.used_percent as f32),
+        stale: snapshot.is_stale,
     }
 }
 
@@ -164,9 +176,13 @@ pub fn build(
     let refresh_item = refresh.clone();
 
     let tray = TrayIconBuilder::with_id("codex-monitor")
-        .icon(Image::from_bytes(include_bytes!(
-            "../icons/trayTemplate.png"
-        ))?)
+        .icon(render_tray_icon(
+            TrayDialState {
+                used_percent: None,
+                stale: false,
+            },
+            44,
+        ))
         .icon_as_template(true)
         .tooltip("Codex Monitor")
         .title(tray_title(None, false))
@@ -213,6 +229,7 @@ pub fn build(
                 .as_ref()
                 .map(|quota| quota.remaining_percent);
             let title = tray_title(remaining, snapshot.is_stale);
+            let _ = tray_updates.set_icon(Some(render_tray_icon(tray_dial_state(&snapshot), 44)));
             let tooltip = match remaining {
                 Some(value) => format!("Codex Monitor · 剩余 {value:.0}%"),
                 None => "Codex Monitor · 额度暂不可用".into(),
@@ -254,6 +271,7 @@ mod tests {
     fn snapshot_with_quota_and_sessions() -> DashboardSnapshot {
         let mut snapshot = DashboardSnapshot {
             observed_at: 1_785_330_000,
+            is_stale: false,
             primary_quota: Some(QuotaView {
                 limit_id: "codex".into(),
                 label: "7 日额度".into(),
@@ -311,6 +329,33 @@ mod tests {
     #[test]
     fn shows_product_name_before_first_observation() {
         assert_eq!(tray_title(None, false), "Codex");
+    }
+
+    #[test]
+    fn maps_snapshot_to_live_dial_state() {
+        let snapshot = snapshot_with_quota_and_sessions();
+        assert_eq!(
+            tray_dial_state(&snapshot),
+            crate::tray_icon::TrayDialState {
+                used_percent: Some(25.0),
+                stale: false,
+            }
+        );
+    }
+
+    #[test]
+    fn maps_missing_quota_to_neutral_dial_state() {
+        let snapshot = DashboardSnapshot {
+            is_stale: true,
+            ..DashboardSnapshot::default()
+        };
+        assert_eq!(
+            tray_dial_state(&snapshot),
+            crate::tray_icon::TrayDialState {
+                used_percent: None,
+                stale: true,
+            }
+        );
     }
 
     #[test]
