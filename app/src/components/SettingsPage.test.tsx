@@ -1,10 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { DEFAULT_APP_SETTINGS } from "../types/settings";
 import { SettingsPage } from "./SettingsPage";
 
 describe("SettingsPage", () => {
+  afterEach(() => vi.useRealTimers());
+
   function SettingsHarness() {
     const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
     const [open, setOpen] = useState(true);
@@ -41,7 +43,8 @@ describe("SettingsPage", () => {
     expect(screen.queryByRole("button", { name: "保存设置" })).toBeNull();
   });
 
-  test("auto-saves the editable monthly subscription price", async () => {
+  test("shows save confirmation only after a real save and then hides it", async () => {
+    vi.useFakeTimers();
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
       <SettingsPage
@@ -50,22 +53,29 @@ describe("SettingsPage", () => {
         onSave={onSave}
       />,
     );
-    expect(screen.getByText("已自动保存")).toBeVisible();
+    expect(screen.queryByText("已保存")).toBeNull();
     fireEvent.change(screen.getByLabelText("月订阅价格"), {
       target: { value: "200" },
     });
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ monthlySubscriptionUsd: 200 }),
-      ),
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ monthlySubscriptionUsd: 200 }),
     );
+    expect(screen.getByText("已保存")).toBeVisible();
+
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(screen.queryByText("已保存")).toBeNull();
   });
 
   test("keeps launch at login enabled after leaving and reopening settings", async () => {
     render(<SettingsHarness />);
     fireEvent.click(screen.getByLabelText("开机启动"));
     await waitFor(() =>
-      expect(screen.getByText("已自动保存")).toBeVisible(),
+      expect(screen.getByText("已保存")).toBeVisible(),
     );
     fireEvent.click(screen.getByRole("button", { name: "返回概览" }));
     fireEvent.click(screen.getByRole("button", { name: "重新打开设置" }));

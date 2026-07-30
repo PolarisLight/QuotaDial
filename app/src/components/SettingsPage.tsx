@@ -12,14 +12,39 @@ export function SettingsPage({
   onBack: () => void;
 }) {
   const [draft, setDraft] = useState(settings);
-  const [message, setMessage] = useState("已自动保存");
+  const [message, setMessage] = useState<string | null>(null);
   const draftRef = useRef(settings);
   const saveQueue = useRef(Promise.resolve());
   const revision = useRef(0);
+  const confirmationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     draftRef.current = settings;
     setDraft(settings);
   }, [settings]);
+  useEffect(
+    () => () => {
+      if (confirmationTimer.current !== null) {
+        clearTimeout(confirmationTimer.current);
+      }
+    },
+    [],
+  );
+
+  const clearConfirmationTimer = () => {
+    if (confirmationTimer.current !== null) {
+      clearTimeout(confirmationTimer.current);
+      confirmationTimer.current = null;
+    }
+  };
+
+  const showSavedConfirmation = () => {
+    clearConfirmationTimer();
+    setMessage("已保存");
+    confirmationTimer.current = setTimeout(() => {
+      setMessage(null);
+      confirmationTimer.current = null;
+    }, 1_600);
+  };
 
   const validationMessage = (value: AppSettings) => {
     if (
@@ -43,15 +68,17 @@ export function SettingsPage({
       return;
     }
     const currentRevision = ++revision.current;
-    setMessage("正在保存…");
+    clearConfirmationTimer();
+    setMessage(null);
     saveQueue.current = saveQueue.current
       .catch(() => undefined)
       .then(() => onSave(next))
       .then(() => {
-        if (revision.current === currentRevision) setMessage("已自动保存");
+        if (revision.current === currentRevision) showSavedConfirmation();
       })
       .catch(error => {
         if (revision.current === currentRevision) {
+          clearConfirmationTimer();
           draftRef.current = previous;
           setDraft(previous);
           setMessage(
@@ -189,9 +216,11 @@ export function SettingsPage({
         />
       </SettingsSection>
 
-      <div className="settings-save-row">
-        <span role="status">{message}</span>
-      </div>
+      {message && (
+        <div className="settings-save-row">
+          <span role="status">{message}</span>
+        </div>
+      )}
     </div>
   );
 }
