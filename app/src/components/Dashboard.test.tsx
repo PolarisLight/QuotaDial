@@ -187,6 +187,16 @@ describe("Dashboard", () => {
     expect(screen.getByText("账号 Token 数据暂不可用")).toBeVisible();
   });
 
+  test("labels a delayed daily usage bucket with its actual date", () => {
+    renderDashboard({
+      ...snapshot,
+      observedAt: new Date(2026, 6, 30, 12).getTime() / 1_000,
+    });
+
+    expect(screen.getByText("7 月 29 日 Token")).toBeVisible();
+    expect(screen.queryByText("今日 Token")).not.toBeInTheDocument();
+  });
+
   test("explains when current pace survives the quota window", () => {
     renderDashboard({
       ...snapshot,

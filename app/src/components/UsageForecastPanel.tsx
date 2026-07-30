@@ -26,6 +26,21 @@ const tokenFormatter = new Intl.NumberFormat("zh-CN", {
   maximumFractionDigits: 1,
 });
 
+function localDateKey(timestamp: number) {
+  const date = new Date(timestamp * 1_000);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function bucketLabel(startDate: string, observedAt: number) {
+  if (startDate === localDateKey(observedAt)) return "今日 Token";
+  const [, month, day] = startDate.split("-").map(Number);
+  return `${month} 月 ${day} 日 Token`;
+}
+
 function forecastCopy(forecast: ExhaustionForecast | null) {
   if (!forecast) {
     return {
@@ -71,8 +86,15 @@ export function UsageForecastPanel({
 }: UsageForecastPanelProps) {
   const copy = forecastCopy(forecast);
   const dailyBuckets = usage?.dailyUsageBuckets ?? [];
-  const buckets = dailyBuckets.slice(-7);
-  const today = buckets.at(-1)?.tokens ?? null;
+  const latestBucket = dailyBuckets.reduce<(typeof dailyBuckets)[number] | null>(
+    (latest, bucket) =>
+      latest === null || bucket.startDate > latest.startDate ? bucket : latest,
+    null,
+  );
+  const latestTokens = latestBucket?.tokens ?? null;
+  const latestTokenLabel = latestBucket
+    ? bucketLabel(latestBucket.startDate, observedAt)
+    : "今日 Token";
 
   return (
     <section className="panel usage-panel" aria-labelledby="usage-heading">
@@ -88,8 +110,12 @@ export function UsageForecastPanel({
         <>
           <div className="usage-summary">
             <div>
-              <span>今日 Token</span>
-              <strong>{today === null ? "—" : tokenFormatter.format(today)}</strong>
+              <span>{latestTokenLabel}</span>
+              <strong>
+                {latestTokens === null
+                  ? "—"
+                  : tokenFormatter.format(latestTokens)}
+              </strong>
             </div>
             <div>
               <span>历史峰值</span>

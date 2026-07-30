@@ -5,6 +5,7 @@ import type {
   QuotaView,
 } from "../types/dashboard";
 import { recentRateCopy, suggestedPace } from "../lib/pace";
+import { estimateCurrentDayTokens } from "../lib/tokenEstimate";
 import type { PaceMode } from "../types/settings";
 
 interface UsageQuotaChartProps {
@@ -168,6 +169,7 @@ export function UsageQuotaChart({
             end,
             tokens: matching.reduce((sum, bucket) => sum + bucket.tokens, 0),
             hasData: matching.length > 0,
+            estimated: false,
             title:
               matching.length > 0
                 ? matching.map(bucket => bucket.startDate).join("、")
@@ -181,9 +183,33 @@ export function UsageQuotaChart({
           end: nextLocalMidnight(bucket.startDate),
           tokens: bucket.tokens,
           hasData: true,
+          estimated: false,
           title: bucket.startDate,
         }));
-  const maxTokens = Math.max(...chartSlots.map(slot => slot.tokens), 1);
+  const estimatedTokens =
+    quota === null
+      ? null
+      : estimateCurrentDayTokens({
+          buckets,
+          history,
+          quota,
+          observedAt,
+        });
+  const todayKey = localDateKey(observedAt);
+  const displaySlots = chartSlots.map(slot =>
+    !slot.hasData &&
+    localDateKey(slot.start) === todayKey &&
+    estimatedTokens !== null
+      ? {
+          ...slot,
+          tokens: estimatedTokens,
+          hasData: true,
+          estimated: true,
+          title: todayKey,
+        }
+      : slot,
+  );
+  const maxTokens = Math.max(...displaySlots.map(slot => slot.tokens), 1);
 
   const observedQuotaPoints =
     rangeStart === null || rangeEnd === null
@@ -297,6 +323,24 @@ export function UsageQuotaChart({
       >
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img">
         <title>最近 7 日 Token 柱形与剩余额度折线</title>
+        <defs>
+          <pattern
+            id="estimated-token-pattern"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect className="estimated-token-base" width="6" height="6" />
+            <line
+              className="estimated-token-stripe"
+              x1="0"
+              x2="0"
+              y1="0"
+              y2="6"
+            />
+          </pattern>
+        </defs>
         {timeBoundaries.map((timestamp, index) => {
           const x = xAt(timestamp);
           return (
@@ -338,7 +382,7 @@ export function UsageQuotaChart({
             />
           </>
         )}
-        {chartSlots.map(slot => {
+        {displaySlots.map(slot => {
           const height = Math.max(
             7,
             (slot.tokens / maxTokens) * PLOT_HEIGHT,
@@ -353,6 +397,8 @@ export function UsageQuotaChart({
                 <rect
                   aria-label={`${slot.title}，${slot.tokens.toLocaleString("zh-CN")} Token`}
                   className={`token-bar interactive ${
+                    slot.estimated ? "estimated" : ""
+                  } ${
                     tooltip?.key === `tokens-${slot.key}` ? "active" : ""
                   }`}
                   role="button"
@@ -368,7 +414,7 @@ export function UsageQuotaChart({
                     setTooltip({
                       key: `tokens-${slot.key}`,
                       kind: "tokens",
-                      value: slot.tokens.toLocaleString("zh-CN"),
+                      value: `${slot.estimated ? "估算 " : ""}${slot.tokens.toLocaleString("zh-CN")}`,
                       x: center,
                       y: BOTTOM - height,
                     });
@@ -377,7 +423,7 @@ export function UsageQuotaChart({
                     setTooltip({
                       key: `tokens-${slot.key}`,
                       kind: "tokens",
-                      value: slot.tokens.toLocaleString("zh-CN"),
+                      value: `${slot.estimated ? "估算 " : ""}${slot.tokens.toLocaleString("zh-CN")}`,
                       x: center,
                       y: BOTTOM - height,
                     })
@@ -386,7 +432,7 @@ export function UsageQuotaChart({
                     setTooltip({
                       key: `tokens-${slot.key}`,
                       kind: "tokens",
-                      value: slot.tokens.toLocaleString("zh-CN"),
+                      value: `${slot.estimated ? "估算 " : ""}${slot.tokens.toLocaleString("zh-CN")}`,
                       x: center,
                       y: BOTTOM - height,
                     })

@@ -5,6 +5,7 @@ use crate::{
     sessions::service::SessionService,
     tray_icon::{render_tray_icon, TrayDialState},
 };
+use chrono::Datelike;
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
@@ -101,7 +102,7 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
         Some(ForecastStatus::NoMeasurableBurn) => "预测  当前消耗很低".into(),
         None => "预测  正在积累样本".into(),
     };
-    let today_tokens = snapshot
+    let latest_tokens = snapshot
         .account_usage
         .as_ref()
         .and_then(|usage| {
@@ -109,8 +110,26 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
                 .daily_usage_buckets
                 .iter()
                 .max_by_key(|item| &item.start_date)
+        });
+    let observed_date = chrono::DateTime::from_timestamp(snapshot.observed_at, 0)
+        .filter(|_| snapshot.observed_at > 0)
+        .map(|value| {
+            value
+                .with_timezone(&chrono::Local)
+                .format("%Y-%m-%d")
+                .to_string()
+        });
+    let today_tokens = latest_tokens
+        .map(|bucket| {
+            let label = if observed_date.as_deref() == Some(bucket.start_date.as_str()) {
+                "今日 Token".to_owned()
+            } else {
+                chrono::NaiveDate::parse_from_str(&bucket.start_date, "%Y-%m-%d")
+                    .map(|date| format!("{} 月 {} 日 Token", date.month(), date.day()))
+                    .unwrap_or_else(|_| format!("{} Token", bucket.start_date))
+            };
+            format!("{label}  {}", format_token_count(bucket.tokens))
         })
-        .map(|bucket| format!("今日 Token  {}", format_token_count(bucket.tokens)))
         .unwrap_or_else(|| "今日 Token  —".into());
     let updated = chrono::DateTime::from_timestamp(snapshot.observed_at, 0)
         .filter(|_| snapshot.observed_at > 0)
@@ -456,6 +475,16 @@ mod tests {
         let state = menu_state(&snapshot);
         assert_eq!(state.quota, "○  额度暂不可用");
         assert_eq!(state.sessions, "本机会话  3 个");
+    }
+
+    #[test]
+    fn labels_a_delayed_daily_bucket_with_its_actual_date() {
+        let mut snapshot = snapshot_with_quota_and_sessions();
+        snapshot.observed_at = 1_785_383_781;
+
+        let state = menu_state(&snapshot);
+
+        assert_eq!(state.today_tokens, "7 月 29 日 Token  3173.7 万");
     }
 
     #[test]

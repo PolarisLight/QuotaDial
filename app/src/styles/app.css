@@ -625,6 +625,20 @@ h2 {
   animation: rise 320ms ease-out both;
 }
 
+.token-bar.estimated {
+  fill: url("#estimated-token-pattern");
+  opacity: 0.82;
+}
+
+.estimated-token-base {
+  fill: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.estimated-token-stripe {
+  stroke: color-mix(in srgb, var(--accent) 82%, transparent);
+  stroke-width: 2.2;
+}
+
 .token-bar.interactive,
 .remaining-quota-point.interactive {
   cursor: default;

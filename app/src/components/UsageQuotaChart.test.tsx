@@ -135,6 +135,35 @@ describe("UsageQuotaChart", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
+  test("renders a visually distinct current-day estimate and reveals it only on hover", () => {
+    const cycleStart = new Date(2026, 6, 29, 12).getTime() / 1_000;
+    const todayStart = new Date(2026, 6, 30).getTime() / 1_000;
+    const { container } = render(
+      <UsageQuotaChart
+        buckets={[{ startDate: "2026-07-29", tokens: 240_000 }]}
+        history={[
+          { observedAt: cycleStart + 6 * 3_600, remainingPercent: 95 },
+          { observedAt: todayStart, remainingPercent: 90 },
+        ]}
+        observedAt={todayStart + 12 * 3_600}
+        pace={null}
+        quota={{
+          ...quota,
+          remainingPercent: 85,
+          resetsAt: cycleStart + 7 * day,
+        }}
+      />,
+    );
+
+    const estimatedBar = container.querySelector(".token-bar.estimated");
+    expect(estimatedBar).not.toBeNull();
+    expect(screen.queryByText("估算")).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(estimatedBar!);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("估算");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("60,000");
+  });
+
   test("labels slow and fast consumption without changing line direction", () => {
     const { rerender } = render(
       <UsageQuotaChart
@@ -178,6 +207,7 @@ describe("UsageQuotaChart", () => {
           { observedAt: resetStart + 3_600, remainingPercent: 98 },
           { observedAt: resetStart + 7_200, remainingPercent: 96 },
         ]}
+        observedAt={resetStart + 7_200}
         pace={null}
         quota={{
           ...quota,
