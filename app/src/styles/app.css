@@ -116,20 +116,10 @@ button:focus-visible {
   fill: #1b3029;
 }
 
-.brand strong,
-.brand small {
-  display: block;
-}
-
 .brand strong {
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-.brand small {
-  margin-top: 1px;
-  color: var(--muted);
-  font-size: 11px;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .sidebar-nav {
@@ -1443,7 +1433,7 @@ h2 {
     padding-inline: 0;
   }
 
-  .brand > span:last-child,
+  .brand > strong,
   .nav-item:not(.active),
   .nav-item {
     font-size: 0;

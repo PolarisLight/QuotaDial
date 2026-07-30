@@ -16,10 +16,7 @@ export function AppSidebar({
         <span className="brand-mark">
           <BrandMark />
         </span>
-        <span>
-          <strong>Quota</strong>
-          <small>Dial</small>
-        </span>
+        <strong>QuotaDial</strong>
       </div>
 
       <nav className="sidebar-nav" aria-label="主导航">

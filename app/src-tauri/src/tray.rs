@@ -156,7 +156,6 @@ pub fn should_hide_on_close(window_label: &str) -> bool {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
     ShowOverview,
-    ShowSessions,
     Refresh,
     Settings,
     Quit,
@@ -166,7 +165,6 @@ enum MenuAction {
 fn menu_action(id: &str) -> MenuAction {
     match id {
         "show" => MenuAction::ShowOverview,
-        "sessions" => MenuAction::ShowSessions,
         "refresh" => MenuAction::Refresh,
         "settings" => MenuAction::Settings,
         "quit" => MenuAction::Quit,
@@ -216,8 +214,6 @@ pub fn build(
     let updated = MenuItem::with_id(app, "updated", "最近更新  —", true, None::<&str>)?;
     let separator_two = PredefinedMenuItem::separator(app)?;
     let show = MenuItem::with_id(app, "show", "打开仪表盘", true, None::<&str>)?;
-    let show_sessions =
-        MenuItem::with_id(app, "sessions", "查看最近会话", true, None::<&str>)?;
     let refresh = MenuItem::with_id(app, "refresh", "立即刷新", true, None::<&str>)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
     let settings = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
@@ -241,7 +237,6 @@ pub fn build(
             &updated,
             &separator_two,
             &show,
-            &show_sessions,
             &refresh,
             &separator_three,
             &settings,
@@ -268,10 +263,6 @@ pub fn build(
         .on_menu_event(move |app, event| match menu_action(event.id().as_ref()) {
             MenuAction::ShowOverview => {
                 show_main_window(app);
-            }
-            MenuAction::ShowSessions => {
-                show_main_window(app);
-                let _ = app.emit("dashboard://focus-section", "sessions");
             }
             MenuAction::Refresh => {
                 let monitor = menu_monitor.clone();
@@ -528,6 +519,7 @@ mod tests {
             assert_eq!(menu_action(id), MenuAction::None);
         }
         assert_eq!(menu_action("show"), MenuAction::ShowOverview);
+        assert_eq!(menu_action("sessions"), MenuAction::None);
         assert_eq!(menu_action("settings"), MenuAction::Settings);
     }
 

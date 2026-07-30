@@ -13,6 +13,11 @@ describe("AppSidebar", () => {
       />,
     );
 
+    expect(
+      screen.getByText("QuotaDial", { selector: ".brand strong" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Quota")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dial")).not.toBeInTheDocument();
     expect(screen.getByText("QuotaDial v0.1.0")).toBeVisible();
     expect(screen.getByRole("link", { name: "© 2026 yetform" })).toHaveAttribute(
       "href",
