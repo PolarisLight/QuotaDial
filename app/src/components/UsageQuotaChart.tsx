@@ -389,7 +389,7 @@ export function UsageQuotaChart({
           );
           const slotLeft = xAt(slot.start);
           const slotRight = xAt(slot.end);
-          const width = Math.min(26, (slotRight - slotLeft) * 0.48);
+          const width = 26;
           const center = (slotLeft + slotRight) / 2;
           return (
             <g key={slot.key}>

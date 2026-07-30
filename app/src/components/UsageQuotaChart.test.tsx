@@ -222,5 +222,9 @@ describe("UsageQuotaChart", () => {
       "aria-label",
       expect.stringContaining("2026-07-29"),
     );
+    expect(container.querySelector(".token-bar")).toHaveAttribute(
+      "width",
+      "26",
+    );
   });
 });
