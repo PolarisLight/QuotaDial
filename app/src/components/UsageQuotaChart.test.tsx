@@ -67,7 +67,10 @@ describe("UsageQuotaChart", () => {
       .map(Number);
     expect(yCoordinates[1]).toBeGreaterThan(yCoordinates[0]);
     expect(yCoordinates[2]).toBeGreaterThan(yCoordinates[1]);
-    expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(3);
+    expect(container.querySelectorAll(".remaining-quota-point")).toHaveLength(1);
+    expect(
+      container.querySelector(".remaining-quota-point"),
+    ).toHaveAccessibleName(/60\.0%/);
     expect(screen.getByText("近期消耗率 · 15.0%/天")).toBeVisible();
     expect(screen.getByText("剩余额度")).toBeVisible();
   });

@@ -464,7 +464,7 @@ export function UsageQuotaChart({
             >
               <title>账号剩余额度</title>
             </path>
-            {quotaPoints.slice(1).map(point => {
+            {quotaPoints.slice(-1).map(point => {
               const key = `quota-${point.observedAt}`;
               const value = `${point.remainingPercent.toFixed(1)}%`;
               const label = new Intl.DateTimeFormat("zh-CN", {
