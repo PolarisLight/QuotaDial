@@ -17,8 +17,8 @@ export function AppSidebar({
           <BrandMark />
         </span>
         <span>
-          <strong>Codex</strong>
-          <small>Monitor</small>
+          <strong>Quota</strong>
+          <small>Dial</small>
         </span>
       </div>
 
@@ -42,7 +42,7 @@ export function AppSidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <p>Codex Monitor v{version}</p>
+        <p>QuotaDial v{version}</p>
         <a
           href="https://yetform.cyhao.space/"
           target="_blank"

@@ -224,7 +224,7 @@ pub fn build(
     let quit = MenuItem::with_id(
         app,
         "quit",
-        "退出 Codex Monitor",
+        "退出 QuotaDial",
         true,
         None::<&str>,
     )?;
@@ -261,7 +261,7 @@ pub fn build(
     let tray = TrayIconBuilder::with_id("codex-monitor")
         .icon(initial_icon)
         .icon_as_template(initial_as_template)
-        .tooltip("Codex Monitor")
+        .tooltip("QuotaDial")
         .title(tray_title(None, false))
         .menu(&menu)
         .show_menu_on_left_click(true)
@@ -331,8 +331,8 @@ pub fn build(
             let (icon, as_template) = live_tray_icon(tray_dial_state(&snapshot));
             let _ = tray_updates.set_icon_with_as_template(Some(icon), as_template);
             let tooltip = match remaining {
-                Some(value) => format!("Codex Monitor · 剩余 {value:.0}%"),
-                None => "Codex Monitor · 额度暂不可用".into(),
+                Some(value) => format!("QuotaDial · 剩余 {value:.0}%"),
+                None => "QuotaDial · 额度暂不可用".into(),
             };
             let _ = tray_updates.set_title(Some(title));
             let _ = tray_updates.set_tooltip(Some(tooltip));

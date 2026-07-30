@@ -94,7 +94,7 @@ export function SettingsPage({
         <button className="settings-back" type="button" onClick={onBack}>
           <ArrowLeft size={17} /> 返回概览
         </button>
-        <span className="eyebrow">Codex Monitor</span>
+        <span className="eyebrow">QuotaDial</span>
         <h1>设置</h1>
         <p>控制显示方式、刷新频率与系统通知。</p>
       </header>

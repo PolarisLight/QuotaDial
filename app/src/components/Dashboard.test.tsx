@@ -118,7 +118,7 @@ describe("Dashboard", () => {
   test("uses the quota-dial brand instead of a waveform", () => {
     renderDashboard();
 
-    expect(screen.getByLabelText("Codex Monitor 额度表盘")).toBeVisible();
+    expect(screen.getByLabelText("QuotaDial 额度表盘")).toBeVisible();
     expect(screen.queryByTestId("waveform-brand")).not.toBeInTheDocument();
   });
 

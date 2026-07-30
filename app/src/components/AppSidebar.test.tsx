@@ -13,7 +13,7 @@ describe("AppSidebar", () => {
       />,
     );
 
-    expect(screen.getByText("Codex Monitor v0.1.0")).toBeVisible();
+    expect(screen.getByText("QuotaDial v0.1.0")).toBeVisible();
     expect(screen.getByRole("link", { name: "© 2026 yetform" })).toHaveAttribute(
       "href",
       "https://yetform.cyhao.space/",

@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Codex Monitor",
+  "productName": "QuotaDial",
   "version": "0.1.0",
   "identifier": "com.codexmonitor.app",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Codex Monitor",
+        "title": "QuotaDial",
         "width": 1220,
         "height": 820,
         "minWidth": 900,

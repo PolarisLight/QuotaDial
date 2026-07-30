@@ -14,7 +14,7 @@ const ticks = [
 export function BrandMark({ className }: BrandMarkProps) {
   return (
     <svg
-      aria-label="Codex Monitor 额度表盘"
+      aria-label="QuotaDial 额度表盘"
       className={className}
       role="img"
       viewBox="0 0 44 44"

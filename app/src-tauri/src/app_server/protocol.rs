@@ -76,8 +76,8 @@ impl RpcPeer {
     pub async fn initialize(&self) -> Result<(), AppError> {
         let params = serde_json::to_value(InitializeParams {
             client_info: ClientInfo {
-                name: "codex_monitor",
-                title: "Codex Monitor",
+                name: "quota_dial",
+                title: "QuotaDial",
                 version: env!("CARGO_PKG_VERSION"),
             },
         })?;
@@ -200,8 +200,8 @@ mod tests {
                     "id": 1,
                     "params": {
                         "clientInfo": {
-                            "name": "codex_monitor",
-                            "title": "Codex Monitor",
+                            "name": "quota_dial",
+                            "title": "QuotaDial",
                             "version": "0.1.0"
                         }
                     }

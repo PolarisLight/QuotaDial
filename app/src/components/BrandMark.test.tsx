@@ -6,7 +6,7 @@ describe("BrandMark", () => {
   it("renders the quota dial anatomy with an accessible name", () => {
     const { container } = render(<BrandMark />);
 
-    expect(screen.getByRole("img", { name: "Codex Monitor 额度表盘" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "QuotaDial 额度表盘" })).toBeInTheDocument();
     expect(container.querySelector(".brand-mark__track")).toBeInTheDocument();
     expect(container.querySelector(".brand-mark__used")).toBeInTheDocument();
     expect(container.querySelectorAll(".brand-mark__tick")).toHaveLength(6);

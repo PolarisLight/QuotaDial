@@ -1,6 +1,6 @@
-# Codex Monitor
+# QuotaDial
 
-Codex Monitor 是一个跨平台的 Codex 额度与 Token 监控应用。它以账号返回的额度为准，
+QuotaDial 是一个跨平台的 Codex 额度与 Token 监控应用。它以账号返回的额度为准，
 同时读取当前电脑上的 Codex 会话记录，用于展示每个会话的 Token 构成和等效 API 费用。
 
 ## 数据范围
