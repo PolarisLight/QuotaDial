@@ -153,6 +153,27 @@ pub fn should_hide_on_close(window_label: &str) -> bool {
     window_label == "main"
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    ShowOverview,
+    ShowSessions,
+    Refresh,
+    Settings,
+    Quit,
+    None,
+}
+
+fn menu_action(id: &str) -> MenuAction {
+    match id {
+        "show" => MenuAction::ShowOverview,
+        "sessions" => MenuAction::ShowSessions,
+        "refresh" => MenuAction::Refresh,
+        "settings" => MenuAction::Settings,
+        "quit" => MenuAction::Quit,
+        _ => MenuAction::None,
+    }
+}
+
 fn format_token_count(tokens: i64) -> String {
     if tokens >= 100_000_000 {
         format!("{:.1} 亿", tokens as f64 / 100_000_000.0)
@@ -211,9 +232,7 @@ pub fn build(
         .native_icon(NativeIcon::Refresh)
         .build(app)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    let settings = IconMenuItemBuilder::with_id("settings", "设置…")
-        .native_icon(NativeIcon::SmartBadge)
-        .build(app)?;
+    let settings = MenuItem::with_id(app, "settings", "⚙︎  设置…", true, None::<&str>)?;
     let quit = IconMenuItemBuilder::with_id("quit", "退出 Codex Monitor")
         .native_icon(NativeIcon::StopProgress)
         .build(app)?;
@@ -254,15 +273,15 @@ pub fn build(
         .title(tray_title(None, false))
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .on_menu_event(move |app, event| match event.id().as_ref() {
-            "show" | "quota" | "progress" | "reset" | "forecast" => {
+        .on_menu_event(move |app, event| match menu_action(event.id().as_ref()) {
+            MenuAction::ShowOverview => {
                 show_main_window(app);
             }
-            "sessions" | "today" | "session-count" => {
+            MenuAction::ShowSessions => {
                 show_main_window(app);
                 let _ = app.emit("dashboard://focus-section", "sessions");
             }
-            "refresh" | "updated" => {
+            MenuAction::Refresh => {
                 let monitor = menu_monitor.clone();
                 let sessions = menu_sessions.clone();
                 let refresh = refresh_item.clone();
@@ -272,12 +291,12 @@ pub fn build(
                     let _ = refresh.set_enabled(true);
                 });
             }
-            "settings" => {
+            MenuAction::Settings => {
                 show_main_window(app);
                 let _ = app.emit("dashboard://open-settings", ());
             }
-            "quit" => app.exit(0),
-            _ => {}
+            MenuAction::Quit => app.exit(0),
+            MenuAction::None => {}
         })
         .on_tray_icon_event(move |tray, event| match event {
             TrayIconEvent::DoubleClick {
@@ -501,6 +520,23 @@ mod tests {
     fn only_the_main_window_is_hidden_instead_of_closed() {
         assert!(should_hide_on_close("main"));
         assert!(!should_hide_on_close("settings"));
+    }
+
+    #[test]
+    fn status_rows_do_not_trigger_actions() {
+        for id in [
+            "quota",
+            "progress",
+            "reset",
+            "forecast",
+            "today",
+            "session-count",
+            "updated",
+        ] {
+            assert_eq!(menu_action(id), MenuAction::None);
+        }
+        assert_eq!(menu_action("show"), MenuAction::ShowOverview);
+        assert_eq!(menu_action("settings"), MenuAction::Settings);
     }
 
     #[test]
