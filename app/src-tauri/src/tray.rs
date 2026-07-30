@@ -12,7 +12,7 @@ use std::{
 };
 use tauri::{
     image::Image,
-    menu::{IconMenuItemBuilder, Menu, MenuItem, NativeIcon, PredefinedMenuItem},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
@@ -201,9 +201,7 @@ pub fn build(
 ) -> tauri::Result<TrayIcon> {
     let quota = MenuItem::with_id(app, "quota", "额度暂不可用", true, None::<&str>)?;
     let progress = MenuItem::with_id(app, "progress", "消耗  —", true, None::<&str>)?;
-    let reset = IconMenuItemBuilder::with_id("reset", "重置  —")
-        .native_icon(NativeIcon::RefreshFreestanding)
-        .build(app)?;
+    let reset = MenuItem::with_id(app, "reset", "重置  —", true, None::<&str>)?;
     let forecast = MenuItem::with_id(
         app,
         "forecast",
@@ -212,30 +210,24 @@ pub fn build(
         None::<&str>,
     )?;
     let separator_one = PredefinedMenuItem::separator(app)?;
-    let today_tokens = IconMenuItemBuilder::with_id("today", "今日 Token  —")
-        .native_icon(NativeIcon::ListView)
-        .build(app)?;
-    let sessions_count = IconMenuItemBuilder::with_id("session-count", "本机会话  0 个")
-        .native_icon(NativeIcon::Computer)
-        .build(app)?;
-    let updated = IconMenuItemBuilder::with_id("updated", "最近更新  —")
-        .native_icon(NativeIcon::StatusAvailable)
-        .build(app)?;
+    let today_tokens = MenuItem::with_id(app, "today", "今日 Token  —", true, None::<&str>)?;
+    let sessions_count =
+        MenuItem::with_id(app, "session-count", "本机会话  0 个", true, None::<&str>)?;
+    let updated = MenuItem::with_id(app, "updated", "最近更新  —", true, None::<&str>)?;
     let separator_two = PredefinedMenuItem::separator(app)?;
-    let show = IconMenuItemBuilder::with_id("show", "打开仪表盘")
-        .native_icon(NativeIcon::Home)
-        .build(app)?;
-    let show_sessions = IconMenuItemBuilder::with_id("sessions", "查看最近会话")
-        .native_icon(NativeIcon::QuickLook)
-        .build(app)?;
-    let refresh = IconMenuItemBuilder::with_id("refresh", "立即刷新")
-        .native_icon(NativeIcon::Refresh)
-        .build(app)?;
+    let show = MenuItem::with_id(app, "show", "打开仪表盘", true, None::<&str>)?;
+    let show_sessions =
+        MenuItem::with_id(app, "sessions", "查看最近会话", true, None::<&str>)?;
+    let refresh = MenuItem::with_id(app, "refresh", "立即刷新", true, None::<&str>)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    let settings = MenuItem::with_id(app, "settings", "⚙︎  设置…", true, None::<&str>)?;
-    let quit = IconMenuItemBuilder::with_id("quit", "退出 Codex Monitor")
-        .native_icon(NativeIcon::StopProgress)
-        .build(app)?;
+    let settings = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
+    let quit = MenuItem::with_id(
+        app,
+        "quit",
+        "退出 Codex Monitor",
+        true,
+        None::<&str>,
+    )?;
     let menu = Menu::with_items(
         app,
         &[
