@@ -38,6 +38,14 @@ pub fn run() {
             commands::get_app_settings,
             commands::save_app_settings
         ])
+        .on_window_event(|window, event| {
+            if tray::should_hide_on_close(window.label()) {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

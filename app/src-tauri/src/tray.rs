@@ -12,7 +12,7 @@ use std::{
 };
 use tauri::{
     image::Image,
-    menu::{IconMenuItemBuilder, Menu, NativeIcon, PredefinedMenuItem},
+    menu::{IconMenuItemBuilder, Menu, MenuItem, NativeIcon, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
@@ -43,6 +43,7 @@ fn live_tray_icon(state: TrayDialState) -> (Image<'static>, bool) {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MenuState {
     pub quota: String,
+    pub progress: String,
     pub reset: String,
     pub forecast: String,
     pub today_tokens: String,
@@ -50,19 +51,19 @@ pub struct MenuState {
     pub updated: String,
 }
 
-fn usage_glyph(used_percent: f64) -> &'static str {
-    match used_percent.clamp(0.0, 100.0) {
-        value if value < 12.5 => "○",
-        value if value < 37.5 => "◔",
-        value if value < 62.5 => "◑",
-        value if value < 87.5 => "◕",
-        _ => "●",
-    }
+fn usage_progress(used_percent: f64) -> String {
+    let used = used_percent.clamp(0.0, 100.0);
+    let filled = (used / 10.0).round() as usize;
+    format!("{}{}", "█".repeat(filled), "░".repeat(10 - filled))
 }
 
 pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
-    let (quota, reset) = snapshot.primary_quota.as_ref().map_or_else(
-        || ("○  额度暂不可用".to_owned(), "重置  —".to_owned()),
+    let (quota, progress, reset) = snapshot.primary_quota.as_ref().map_or_else(
+        || (
+            "额度暂不可用".to_owned(),
+            "消耗  —".to_owned(),
+            "重置  —".to_owned(),
+        ),
         |quota| {
             let used = quota.used_percent.clamp(0.0, 100.0);
             let reset = chrono::DateTime::from_timestamp(quota.resets_at, 0)
@@ -74,11 +75,8 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
                 })
                 .unwrap_or_else(|| "重置  —".into());
             (
-                format!(
-                    "{}  额度剩余 {:.0}% · 已用 {used:.0}%",
-                    usage_glyph(used),
-                    quota.remaining_percent
-                ),
+                format!("额度剩余 {:.0}% · 已用 {used:.0}%", quota.remaining_percent),
+                format!("消耗  {}  {used:.0}%", usage_progress(used)),
                 reset,
             )
         },
@@ -142,12 +140,17 @@ pub fn menu_state(snapshot: &DashboardSnapshot) -> MenuState {
         .unwrap_or_else(|| "最近更新  —".into());
     MenuState {
         quota,
+        progress,
         reset,
         forecast,
         today_tokens,
         sessions: format!("本机会话  {} 个", snapshot.local_sessions.sessions.len()),
         updated,
     }
+}
+
+pub fn should_hide_on_close(window_label: &str) -> bool {
+    window_label == "main"
 }
 
 fn format_token_count(tokens: i64) -> String {
@@ -175,15 +178,18 @@ pub fn build(
     monitor: Arc<AccountMonitor>,
     session_service: Arc<SessionService>,
 ) -> tauri::Result<TrayIcon> {
-    let quota = IconMenuItemBuilder::with_id("quota", "○  额度暂不可用")
-        .native_icon(NativeIcon::StatusNone)
-        .build(app)?;
+    let quota = MenuItem::with_id(app, "quota", "额度暂不可用", true, None::<&str>)?;
+    let progress = MenuItem::with_id(app, "progress", "消耗  —", true, None::<&str>)?;
     let reset = IconMenuItemBuilder::with_id("reset", "重置  —")
         .native_icon(NativeIcon::RefreshFreestanding)
         .build(app)?;
-    let forecast = IconMenuItemBuilder::with_id("forecast", "预测  正在积累样本")
-        .native_icon(NativeIcon::SmartBadge)
-        .build(app)?;
+    let forecast = MenuItem::with_id(
+        app,
+        "forecast",
+        "预测  正在积累样本",
+        true,
+        None::<&str>,
+    )?;
     let separator_one = PredefinedMenuItem::separator(app)?;
     let today_tokens = IconMenuItemBuilder::with_id("today", "今日 Token  —")
         .native_icon(NativeIcon::ListView)
@@ -206,7 +212,7 @@ pub fn build(
         .build(app)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
     let settings = IconMenuItemBuilder::with_id("settings", "设置…")
-        .native_icon(NativeIcon::PreferencesGeneral)
+        .native_icon(NativeIcon::SmartBadge)
         .build(app)?;
     let quit = IconMenuItemBuilder::with_id("quit", "退出 Codex Monitor")
         .native_icon(NativeIcon::StopProgress)
@@ -215,6 +221,7 @@ pub fn build(
         app,
         &[
             &quota,
+            &progress,
             &reset,
             &forecast,
             &separator_one,
@@ -248,7 +255,7 @@ pub fn build(
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| match event.id().as_ref() {
-            "show" | "quota" | "reset" | "forecast" => {
+            "show" | "quota" | "progress" | "reset" | "forecast" => {
                 show_main_window(app);
             }
             "sessions" | "today" | "session-count" => {
@@ -294,6 +301,7 @@ pub fn build(
 
     let tray_updates = tray.clone();
     let quota_updates = quota.clone();
+    let progress_updates = progress.clone();
     let reset_updates = reset.clone();
     let forecast_updates = forecast.clone();
     let today_updates = today_tokens.clone();
@@ -318,6 +326,7 @@ pub fn build(
             let _ = tray_updates.set_title(Some(title));
             let _ = tray_updates.set_tooltip(Some(tooltip));
             let _ = quota_updates.set_text(state.quota);
+            let _ = progress_updates.set_text(state.progress);
             let _ = reset_updates.set_text(state.reset);
             let _ = forecast_updates.set_text(state.forecast);
             let _ = today_updates.set_text(state.today_tokens);
@@ -459,7 +468,8 @@ mod tests {
     #[test]
     fn formats_complete_menu_status_from_one_snapshot() {
         let state = menu_state(&snapshot_with_quota_and_sessions());
-        assert_eq!(state.quota, "◔  额度剩余 75% · 已用 25%");
+        assert_eq!(state.quota, "额度剩余 75% · 已用 25%");
+        assert_eq!(state.progress, "消耗  ███░░░░░░░  25%");
         assert!(state.reset.starts_with("重置  8 月 5 日"));
         assert_eq!(state.forecast, "预测  重置前不会耗尽");
         assert_eq!(state.today_tokens, "今日 Token  3173.7 万");
@@ -473,7 +483,7 @@ mod tests {
             ..DashboardSnapshot::default()
         };
         let state = menu_state(&snapshot);
-        assert_eq!(state.quota, "○  额度暂不可用");
+        assert_eq!(state.quota, "额度暂不可用");
         assert_eq!(state.sessions, "本机会话  3 个");
     }
 
@@ -485,6 +495,12 @@ mod tests {
         let state = menu_state(&snapshot);
 
         assert_eq!(state.today_tokens, "7 月 29 日 Token  3173.7 万");
+    }
+
+    #[test]
+    fn only_the_main_window_is_hidden_instead_of_closed() {
+        assert!(should_hide_on_close("main"));
+        assert!(!should_hide_on_close("settings"));
     }
 
     #[test]
@@ -503,11 +519,11 @@ mod tests {
     }
 
     #[test]
-    fn maps_usage_to_a_compact_progress_glyph() {
-        assert_eq!(usage_glyph(0.0), "○");
-        assert_eq!(usage_glyph(25.0), "◔");
-        assert_eq!(usage_glyph(50.0), "◑");
-        assert_eq!(usage_glyph(75.0), "◕");
-        assert_eq!(usage_glyph(100.0), "●");
+    fn maps_usage_to_a_ten_segment_progress_bar() {
+        assert_eq!(usage_progress(0.0), "░░░░░░░░░░");
+        assert_eq!(usage_progress(25.0), "███░░░░░░░");
+        assert_eq!(usage_progress(50.0), "█████░░░░░");
+        assert_eq!(usage_progress(75.0), "████████░░");
+        assert_eq!(usage_progress(100.0), "██████████");
     }
 }
