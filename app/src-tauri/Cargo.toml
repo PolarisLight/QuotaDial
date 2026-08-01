@@ -1,10 +1,10 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Cross-platform Codex and Claude usage quota dashboard"
+authors = ["yetform"]
+repository = "https://github.com/PolarisLight/QuotaDial"
+publish = false
 edition = "2021"
 rust-version = "1.77.2"
 
