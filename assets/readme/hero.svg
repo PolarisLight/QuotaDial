@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
+  <title id="title">QuotaDial — account quota, Token usage, and equivalent cost</title>
+  <desc id="desc">A technical product title with QuotaDial's hexagonal dial and a descending remaining-quota trace.</desc>
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#173B32"/>
+      <stop offset="1" stop-color="#0D2721"/>
+    </linearGradient>
+    <clipPath id="chart-clip">
+      <rect x="790" y="79" width="326" height="226" rx="18"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1200" height="390" rx="28" fill="url(#surface)"/>
+  <path d="M0 330H1200" stroke="#35584E" stroke-width="1"/>
+  <path d="M704 0V390" stroke="#35584E" stroke-width="1"/>
+
+  <g transform="translate(62 54)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <text x="0" y="16" fill="#72D6A7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" letter-spacing="2.8">CODEX USAGE, WITHOUT THE GUESSWORK</text>
+    <text x="0" y="105" fill="#F5F3EA" font-size="76" font-weight="750" letter-spacing="-3">QuotaDial</text>
+    <text x="0" y="157" fill="#D2DDD8" font-size="25" font-weight="500">Account quota, Token usage, and equivalent cost</text>
+    <text x="0" y="195" fill="#91A59E" font-size="21">One native dashboard. Every device on your account.</text>
+
+    <g transform="translate(0 236)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">
+      <rect width="176" height="38" rx="19" fill="#214A3E" stroke="#3C7060"/>
+      <circle cx="22" cy="19" r="5" fill="#72D6A7"/>
+      <text x="38" y="25" fill="#DDE9E4">ACCOUNT-WIDE</text>
+      <rect x="190" width="164" height="38" rx="19" fill="#1B3933" stroke="#35584E"/>
+      <text x="211" y="25" fill="#AFC0BA">LOCAL DETAIL</text>
+    </g>
+  </g>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <rect x="752" y="42" width="406" height="286" rx="24" fill="#16342D" stroke="#42665B"/>
+    <text x="790" y="82" fill="#91A59E" font-size="17" font-weight="650">7-DAY QUOTA</text>
+    <text x="790" y="131" fill="#F5F3EA" font-size="47" font-weight="750">41%</text>
+    <text x="892" y="130" fill="#91A59E" font-size="19">remaining</text>
+
+    <g clip-path="url(#chart-clip)">
+      <path d="M790 160H1118M790 214H1118M790 268H1118" stroke="#35584E" stroke-width="1"/>
+      <path d="M856 150V305M922 150V305M988 150V305M1054 150V305" stroke="#2A4A42" stroke-width="1"/>
+      <path d="M790 158C829 165 846 181 874 191S918 205 948 222 991 232 1020 251 1064 266 1118 277" fill="none" stroke="#F5F3EA" stroke-width="5" stroke-linecap="round"/>
+      <path d="M790 158L1118 286" fill="none" stroke="#72D6A7" stroke-width="2.5" stroke-dasharray="9 10" opacity=".8"/>
+      <g fill="#8FA7FF" opacity=".88">
+        <rect x="806" y="274" width="22" height="31" rx="5"/>
+        <rect x="872" y="252" width="22" height="53" rx="5"/>
+        <rect x="938" y="281" width="22" height="24" rx="5"/>
+        <rect x="1004" y="262" width="22" height="43" rx="5"/>
+        <rect x="1070" y="270" width="22" height="35" rx="5"/>
+      </g>
+      <circle cx="1118" cy="277" r="8" fill="#16342D" stroke="#F5F3EA" stroke-width="4"/>
+    </g>
+
+    <path d="M1132 67L1141 72V82L1132 87L1123 82V72Z" fill="none" stroke="#72D6A7" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M1132 77L1138 73" stroke="#F5F3EA" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(62 353)" fill="#91A59E" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">
+    <text>ACCOUNT SOURCE</text>
+    <text x="170" fill="#DDE9E4">CODEX</text>
+    <text x="710">NATIVE DESKTOP</text>
+    <text x="884" fill="#DDE9E4">MACOS PREVIEW</text>
+  </g>
+</svg>
