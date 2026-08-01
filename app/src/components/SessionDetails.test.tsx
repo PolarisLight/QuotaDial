@@ -41,7 +41,9 @@ function renderedSessionTitles() {
   return within(screen.getByRole("table"))
     .getAllByRole("row")
     .slice(1)
-    .map(row => within(row).getAllByRole("cell")[0].textContent);
+    .map(row =>
+      within(row).getAllByRole("cell")[0].querySelector("strong")?.textContent,
+    );
 }
 
 describe("SessionDetails", () => {
@@ -129,7 +131,8 @@ describe("SessionDetails", () => {
 
     const row = screen.getByRole("row", { name: /cross-month/ });
     expect(within(row).getAllByRole("cell")[3]).toHaveTextContent("100");
-    fireEvent.click(screen.getByRole("button", { name: "cross-month" }));
+    fireEvent.click(screen.getByRole("button", { name: /cross-month/ }));
+    fireEvent.click(document.querySelector(".project-session-item summary")!);
     const totalTokenItem = screen.getByText("历史总 Token").parentElement!;
     expect(within(totalTokenItem).getByText("1,000")).toBeVisible();
     expect(screen.getByText("历史总等效费用")).toBeVisible();

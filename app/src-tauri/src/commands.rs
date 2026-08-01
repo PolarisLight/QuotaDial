@@ -1,5 +1,8 @@
 use crate::{
-    domain::{dashboard::DashboardSnapshot, session::LocalSessionView},
+    domain::{
+        dashboard::{DashboardSnapshot, TrayPanelSnapshot},
+        session::LocalSessionView,
+    },
     monitor::AccountMonitor,
     sessions::service::SessionService,
     settings::{AppSettings, SettingsRuntime},
@@ -66,6 +69,13 @@ pub async fn get_dashboard_snapshot(
 }
 
 #[tauri::command]
+pub async fn get_tray_snapshot(
+    state: tauri::State<'_, AppState>,
+) -> Result<TrayPanelSnapshot, String> {
+    Ok(TrayPanelSnapshot::from(&state.monitor.snapshot()))
+}
+
+#[tauri::command]
 pub async fn refresh_account(
     state: tauri::State<'_, AppState>,
 ) -> Result<DashboardSnapshot, String> {
@@ -74,4 +84,35 @@ pub async fn refresh_account(
         .refresh()
         .await
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn refresh_tray_snapshot(
+    state: tauri::State<'_, AppState>,
+) -> Result<TrayPanelSnapshot, String> {
+    state
+        .monitor
+        .refresh()
+        .await
+        .map(|snapshot| TrayPanelSnapshot::from(&snapshot))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn open_dashboard(app: tauri::AppHandle, destination: Option<String>) {
+    if destination.as_deref() == Some("settings") {
+        crate::tray::show_settings(&app);
+    } else {
+        crate::tray::show_main_window(&app);
+    }
+}
+
+#[tauri::command]
+pub fn hide_tray_panel(app: tauri::AppHandle) {
+    crate::tray::hide_tray_panel(&app);
+}
+
+#[tauri::command]
+pub fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
 }

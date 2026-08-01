@@ -104,3 +104,14 @@ export interface DashboardSnapshot {
   quotaPace: QuotaPace | null;
   localSessions: LocalSessionView;
 }
+
+export interface TrayPanelSnapshot {
+  observedAt: number;
+  isStale: boolean;
+  connectionError: string | null;
+  primaryQuota: QuotaView | null;
+  forecastStatus: ForecastStatus | null;
+  latestDailyTokens: number | null;
+  projectCount: number;
+  sessionCount: number;
+}

@@ -129,7 +129,7 @@ describe("Dashboard", () => {
     expect(screen.getAllByText("所有设备").length).toBeGreaterThan(0);
     expect(screen.getByText("预计额度耗尽")).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "会话详情" }),
+      screen.getByRole("heading", { name: "项目与会话" }),
     ).toBeVisible();
     expect(screen.queryByText("根会话")).not.toBeInTheDocument();
     expect(screen.queryByText("子代理")).not.toBeInTheDocument();
@@ -323,9 +323,10 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(screen.getByText("example-project · 7月29日")).toBeVisible();
+    expect(screen.getByText("example-project")).toBeVisible();
     expect(container.querySelectorAll("tbody .session-row")).toHaveLength(1);
-    expect(screen.getByText("含 1 个子任务")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /example-project/ }));
+    expect(screen.getByText("包含 1 个子任务")).toBeVisible();
     expect(screen.queryByText("根会话")).not.toBeInTheDocument();
   });
 
@@ -380,8 +381,8 @@ describe("Dashboard", () => {
     );
 
     expect(container.querySelectorAll("tbody .session-row")).toHaveLength(12);
-    expect(screen.getByText("12 个会话")).toBeVisible();
-    expect(screen.getByText("会话 8")).toBeVisible();
+    expect(screen.getByText("12 个项目 · 12 个会话")).toBeVisible();
+    expect(screen.getByText("project-8")).toBeVisible();
   });
 
   test("shows known cost as a lower bound when some tokens are unpriced", () => {
@@ -419,8 +420,9 @@ describe("Dashboard", () => {
       screen.getByRole("region", { name: "Token 与额度趋势" }),
     ).not.toHaveTextContent("等效费用");
     fireEvent.click(
-      screen.getByRole("button", { name: /example-project · 7月29日/ }),
+      screen.getByRole("button", { name: /example-project/ }),
     );
+    fireEvent.click(document.querySelector(".project-session-item summary")!);
     expect(screen.getByText("350 未定价 Token")).toBeVisible();
   });
 
@@ -576,7 +578,7 @@ describe("Dashboard", () => {
     vi.useFakeTimers();
     renderDashboard();
     const section = screen
-      .getByRole("heading", { name: "会话详情" })
+      .getByRole("heading", { name: "项目与会话" })
       .closest("section")!;
 
     focusDashboardSection("sessions");

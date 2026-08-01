@@ -3,14 +3,16 @@ import {
   CaretDown,
   CaretUp,
   ChatCenteredDots,
+  FolderOpen,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { backend } from "../lib/backend";
 import {
-  sortSessions,
-  type SessionSort,
-} from "../lib/sessionSort";
+  groupSessionsByProject,
+  type SessionProjectGroup,
+} from "../lib/sessionGroups";
+import type { SessionSort } from "../lib/sessionSort";
 import type {
   LocalSessionView,
   SessionSummary,
@@ -48,15 +50,17 @@ function formatCost(cost: number | null, unpricedTokens: number) {
   return `${prefix} US$${cost.toFixed(digits)}`;
 }
 
-function projectName(path: string | null) {
-  return path?.split(/[\\/]/).filter(Boolean).at(-1) ?? "未命名项目";
+function modelLabel(group: SessionProjectGroup) {
+  if (group.models.length === 0) return "未知模型";
+  if (group.models.length === 1) return group.models[0];
+  return `${group.models.length} 个模型`;
 }
 
 export function SessionDetails({ view }: SessionDetailsProps) {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [rescanning, setRescanning] = useState(false);
   const [sort, setSort] = useState<SessionSort>("recent");
-  const sessions = sortSessions(view.sessions, sort);
+  const projects = groupSessionsByProject(view.sessions, sort);
 
   const rescan = async () => {
     setRescanning(true);
@@ -76,11 +80,11 @@ export function SessionDetails({ view }: SessionDetailsProps) {
       <div className="panel-heading">
         <div>
           <span className="eyebrow">本机记录</span>
-          <h2 id="sessions-heading">会话详情</h2>
+          <h2 id="sessions-heading">项目与会话</h2>
         </div>
         {view.sessions.length > 0 && (
           <span className="session-scan-time">
-            {view.sessions.length} 个会话
+            {projects.length} 个项目 · {view.sessions.length} 个会话
           </span>
         )}
       </div>
@@ -117,11 +121,14 @@ export function SessionDetails({ view }: SessionDetailsProps) {
           className="session-table-wrap"
           style={{ overflowX: "hidden", overflowY: "auto" }}
         >
-          <table className="session-table" style={{ tableLayout: "fixed" }}>
+          <table
+            className="session-table project-table"
+            style={{ tableLayout: "fixed" }}
+          >
             <thead>
               <tr>
-                <th>会话</th>
                 <th>项目</th>
+                <th>会话</th>
                 <th>模型</th>
                 <th>
                   <button
@@ -163,14 +170,14 @@ export function SessionDetails({ view }: SessionDetailsProps) {
               </tr>
             </thead>
             <tbody>
-              {sessions.map(session => (
-                <SessionRow
-                  key={session.sessionId}
-                  session={session}
-                  expanded={expanded === session.sessionId}
+              {projects.map(project => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  expanded={expandedProject === project.id}
                   onToggle={() =>
-                    setExpanded(current =>
-                      current === session.sessionId ? null : session.sessionId,
+                    setExpandedProject(current =>
+                      current === project.id ? null : project.id,
                     )
                   }
                 />
@@ -183,109 +190,129 @@ export function SessionDetails({ view }: SessionDetailsProps) {
   );
 }
 
-function SessionRow({
-  session,
+function ProjectRow({
+  project,
   expanded,
   onToggle,
 }: {
-  session: SessionSummary;
+  project: SessionProjectGroup;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const detailsId = `session-details-${session.sessionId}`;
+  const detailsId = `project-details-${project.id.replace(/[^a-z0-9_-]/gi, "-")}`;
   return (
     <>
-      <tr className="session-row">
+      <tr className="session-row project-row">
         <td>
           <button
-            className="session-title-button"
+            className="session-title-button project-title-button"
             type="button"
             aria-expanded={expanded}
             aria-controls={detailsId}
             onClick={onToggle}
           >
             <CaretDown className={expanded ? "expanded" : undefined} size={14} />
+            <span className="project-folder-icon">
+              <FolderOpen size={16} />
+            </span>
             <span>
-              <strong title={session.title}>{session.title}</strong>
-              {session.childSessionCount > 0 && (
-                <small>含 {session.childSessionCount} 个子任务</small>
-              )}
+              <strong title={project.projectPath ?? project.name}>{project.name}</strong>
+              <small title={project.projectPath ?? "未知路径"}>
+                {project.projectPath ?? "未知路径"}
+              </small>
             </span>
           </button>
         </td>
-        <td
-          className="session-secondary"
-          title={session.projectPath ?? "未命名项目"}
-        >
-          {projectName(session.projectPath)}
+        <td>{project.sessions.length}</td>
+        <td className="session-secondary" title={project.models.join(", ")}>
+          {modelLabel(project)}
         </td>
-        <td
-          className="session-secondary"
-          title={session.primaryModel ?? "未知模型"}
-        >
-          {session.primaryModel ?? "未知模型"}
-        </td>
+        <td>{compactNumber.format(totalTokens(project.monthlyTokens))}</td>
         <td>
+          {formatCost(
+            project.monthlyEquivalentCostUsd,
+            project.monthlyUnpricedTokens,
+          )}
+        </td>
+        <td className="session-secondary">{formatActivity(project.lastActiveAt)}</td>
+      </tr>
+      {expanded && (
+        <tr className="session-detail-row project-detail-row" id={detailsId}>
+          <td colSpan={6}>
+            <div className="project-session-header">
+              <span>{project.sessions.length} 个会话，按最近活动排序</span>
+              {project.childSessionCount > 0 && (
+                <span>包含 {project.childSessionCount} 个子任务</span>
+              )}
+            </div>
+            <div className="project-session-list">
+              {project.sessions.map(session => (
+                <SessionDisclosure key={session.sessionId} session={session} />
+              ))}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function SessionDisclosure({ session }: { session: SessionSummary }) {
+  return (
+    <details className="project-session-item">
+      <summary>
+        <span className="session-time">
+          <strong>{formatActivity(session.lastActiveAt)}</strong>
+          <small>{session.sessionId.slice(-8)}</small>
+        </span>
+        <span>{session.primaryModel ?? "未知模型"}</span>
+        <span>
           {compactNumber.format(
             totalTokens(session.monthlyTokens ?? session.tokens),
           )}
-        </td>
-        <td>
+        </span>
+        <span>
           {formatCost(
             session.monthlyEquivalentCostUsd === undefined
               ? session.equivalentCostUsd
               : session.monthlyEquivalentCostUsd,
             session.monthlyUnpricedTokens ?? session.unpricedTokens,
           )}
-        </td>
-        <td className="session-secondary">{formatActivity(session.lastActiveAt)}</td>
-      </tr>
-      {expanded && (
-        <tr className="session-detail-row" id={detailsId}>
-          <td colSpan={6}>
-            <dl className="session-breakdown">
-              <div>
-                <dt>历史总 Token</dt>
-                <dd>{fullNumber.format(totalTokens(session.tokens))}</dd>
-              </div>
-              <div>
-                <dt>历史总等效费用</dt>
-                <dd>
-                  {formatCost(session.equivalentCostUsd, session.unpricedTokens)}
-                </dd>
-              </div>
-              <div>
-                <dt>历史输入</dt>
-                <dd>{fullNumber.format(session.tokens.inputTokens)}</dd>
-              </div>
-              <div>
-                <dt>历史缓存输入</dt>
-                <dd>{fullNumber.format(session.tokens.cachedInputTokens)}</dd>
-              </div>
-              <div>
-                <dt>历史输出</dt>
-                <dd>{fullNumber.format(session.tokens.outputTokens)}</dd>
-              </div>
-              <div>
-                <dt>历史推理输出</dt>
-                <dd>{fullNumber.format(session.tokens.reasoningOutputTokens)}</dd>
-              </div>
-              {session.unpricedTokens > 0 && (
-                <div>
-                  <dt>未定价</dt>
-                  <dd>
-                    {fullNumber.format(session.unpricedTokens)} 未定价 Token
-                  </dd>
-                </div>
-              )}
-              <div className="session-path">
-                <dt>项目路径</dt>
-                <dd>{session.projectPath ?? "未知"}</dd>
-              </div>
-            </dl>
-          </td>
-        </tr>
-      )}
-    </>
+        </span>
+        <CaretDown className="session-disclosure-caret" size={13} />
+      </summary>
+      <dl className="session-breakdown project-session-breakdown">
+        <div>
+          <dt>历史总 Token</dt>
+          <dd>{fullNumber.format(totalTokens(session.tokens))}</dd>
+        </div>
+        <div>
+          <dt>历史总等效费用</dt>
+          <dd>{formatCost(session.equivalentCostUsd, session.unpricedTokens)}</dd>
+        </div>
+        <div>
+          <dt>历史输入</dt>
+          <dd>{fullNumber.format(session.tokens.inputTokens)}</dd>
+        </div>
+        <div>
+          <dt>历史缓存输入</dt>
+          <dd>{fullNumber.format(session.tokens.cachedInputTokens)}</dd>
+        </div>
+        <div>
+          <dt>历史输出</dt>
+          <dd>{fullNumber.format(session.tokens.outputTokens)}</dd>
+        </div>
+        <div>
+          <dt>历史推理输出</dt>
+          <dd>{fullNumber.format(session.tokens.reasoningOutputTokens)}</dd>
+        </div>
+        {session.unpricedTokens > 0 && (
+          <div>
+            <dt>未定价</dt>
+            <dd>{fullNumber.format(session.unpricedTokens)} 未定价 Token</dd>
+          </div>
+        )}
+      </dl>
+    </details>
   );
 }

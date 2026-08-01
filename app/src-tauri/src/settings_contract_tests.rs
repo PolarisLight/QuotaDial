@@ -3,6 +3,15 @@ use crate::storage::repository::AccountRepository;
 use std::time::Duration;
 
 #[test]
+fn desktop_capability_includes_the_tray_webview() {
+    let capability: serde_json::Value =
+        serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+    let windows = capability["windows"].as_array().unwrap();
+    assert!(windows.iter().any(|window| window == "main"));
+    assert!(windows.iter().any(|window| window == "tray-panel"));
+}
+
+#[test]
 fn settings_defaults_match_the_product_contract() {
     let settings = AppSettings::default();
     assert_eq!(settings.theme, ThemePreference::System);

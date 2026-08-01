@@ -34,7 +34,7 @@ export function DashboardView({
   error,
   onRefresh,
   settings = DEFAULT_APP_SETTINGS,
-  version = "0.1.0",
+  version = "0.1.1",
   destination = "overview",
   onNavigate = () => undefined,
   onSaveSettings = async () => undefined,
@@ -210,7 +210,7 @@ export function Dashboard() {
     "overview",
   );
   const [settings, setSettings] = useState(DEFAULT_APP_SETTINGS);
-  const [version, setVersion] = useState("0.1.0");
+  const [version, setVersion] = useState("0.1.1");
   useEffect(() => {
     void backend.getAppSettings().then(setSettings);
     void backend.getAppVersion().then(setVersion);
