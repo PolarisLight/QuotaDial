@@ -65,4 +65,3 @@ Check image files, language links, GitHub Release URLs, `git diff --check`, and 
 - [ ] **Step 3: Commit the completed README redesign**
 
 Stage only the two README files, two visual assets, and this plan; commit as `docs: redesign bilingual project readme`.
-

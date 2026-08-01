@@ -52,4 +52,3 @@ The README will not claim adoption, Apple notarization, released Claude support,
 - Render the SVG and inspect it at approximately 900 px and 360 px widths.
 - Verify image paths, language links, release links, accessibility text, and dark/light GitHub contrast.
 - Check the final diff and keep unrelated files untouched.
-
