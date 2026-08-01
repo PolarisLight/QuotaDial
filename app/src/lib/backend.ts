@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { DashboardSnapshot, LocalSessionView } from "../types/dashboard";
+import type {
+  DashboardSnapshot,
+  LocalSessionView,
+  TrayPanelSnapshot,
+} from "../types/dashboard";
 import {
   DEFAULT_APP_SETTINGS,
   type AppSettings,
@@ -161,6 +165,22 @@ const previewSnapshot: DashboardSnapshot = {
   },
 };
 
+const previewTraySnapshot: TrayPanelSnapshot = {
+  observedAt: previewSnapshot.observedAt,
+  isStale: previewSnapshot.isStale,
+  connectionError: previewSnapshot.connectionError,
+  primaryQuota: previewSnapshot.primaryQuota,
+  forecastStatus: previewSnapshot.forecast?.status ?? null,
+  latestDailyTokens:
+    previewSnapshot.accountUsage?.dailyUsageBuckets.at(-1)?.tokens ?? null,
+  projectCount: new Set(
+    previewSnapshot.localSessions.sessions.map(session =>
+      session.projectPath?.replaceAll("\\", "/").toLocaleLowerCase(),
+    ),
+  ).size,
+  sessionCount: previewSnapshot.localSessions.sessions.length,
+};
+
 function isWebPreview() {
   return (
     import.meta.env.DEV &&
@@ -195,6 +215,19 @@ export const backend = {
     }
     return invoke<DashboardSnapshot>("refresh_account");
   },
+  getTraySnapshot: () => {
+    if (isWebPreview()) return Promise.resolve(previewTraySnapshot);
+    return invoke<TrayPanelSnapshot>("get_tray_snapshot");
+  },
+  refreshTraySnapshot: () => {
+    if (isWebPreview()) {
+      return Promise.resolve({
+        ...previewTraySnapshot,
+        observedAt: Math.floor(Date.now() / 1_000),
+      });
+    }
+    return invoke<TrayPanelSnapshot>("refresh_tray_snapshot");
+  },
   rescanSessions: () => {
     if (isWebPreview()) {
       return Promise.resolve(previewSnapshot.localSessions);
@@ -216,7 +249,7 @@ export const backend = {
     return invoke<AppSettings>("save_app_settings", { settings });
   },
   getAppVersion: () => {
-    if (isWebPreview()) return Promise.resolve("0.1.0");
+    if (isWebPreview()) return Promise.resolve("0.1.1");
     return import("@tauri-apps/api/app").then(module => module.getVersion());
   },
   onDashboardUpdated: (
@@ -226,6 +259,14 @@ export const backend = {
       return Promise.resolve(() => undefined);
     }
     return listen<DashboardSnapshot>("dashboard://updated", event =>
+      handler(event.payload),
+    );
+  },
+  onTrayUpdated: (
+    handler: (snapshot: TrayPanelSnapshot) => void,
+  ): Promise<UnlistenFn> => {
+    if (isWebPreview()) return Promise.resolve(() => undefined);
+    return listen<TrayPanelSnapshot>("tray://updated", event =>
       handler(event.payload),
     );
   },
@@ -240,5 +281,17 @@ export const backend = {
   onOpenSettings: (handler: () => void): Promise<UnlistenFn> => {
     if (isWebPreview()) return Promise.resolve(() => undefined);
     return listen("dashboard://open-settings", handler);
+  },
+  openDashboard: (destination?: "settings") => {
+    if (isWebPreview()) return Promise.resolve();
+    return invoke<void>("open_dashboard", { destination });
+  },
+  hideTrayPanel: () => {
+    if (isWebPreview()) return Promise.resolve();
+    return invoke<void>("hide_tray_panel");
+  },
+  quitApp: () => {
+    if (isWebPreview()) return Promise.resolve();
+    return invoke<void>("quit_app");
   },
 };

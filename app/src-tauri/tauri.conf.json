@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "QuotaDial",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "space.cyhao.yetform.quotadial",
   "build": {
     "frontendDist": "../dist",
@@ -19,7 +19,27 @@
         "minWidth": 900,
         "minHeight": 640,
         "center": true,
+        "visible": false,
         "resizable": true,
+        "fullscreen": false
+      },
+      {
+        "label": "tray-panel",
+        "title": "QuotaDial",
+        "url": "index.html?view=tray",
+        "width": 360,
+        "height": 496,
+        "minWidth": 360,
+        "minHeight": 496,
+        "maxWidth": 360,
+        "maxHeight": 496,
+        "visible": false,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": true,
         "fullscreen": false
       }
     ]
