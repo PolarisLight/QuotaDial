@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="QuotaDial is a native Codex quota, Token usage, and equivalent cost dashboard for macOS and Windows."
+    />
+    <meta name="theme-color" content="#102b25" />
+    <meta property="og:title" content="QuotaDial | Codex quota, clearly measured" />
+    <meta
+      property="og:description"
+      content="See account-wide quota, daily Token usage, exhaustion forecasts, and local session costs in one native dashboard."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://polarislight.github.io/QuotaDial/" />
+    <meta
+      property="og:image"
+      content="https://polarislight.github.io/QuotaDial/assets/dashboard.webp"
+    />
+    <title>QuotaDial | Codex quota, clearly measured</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <nav class="nav shell" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="QuotaDial home">
+          <img src="assets/logo.svg" width="38" height="38" alt="" />
+          <span>QuotaDial</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#scope">Data scope</a>
+          <a href="https://github.com/PolarisLight/QuotaDial">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" id="top">
+        <div class="hero-copy">
+          <p class="kicker">Native Codex usage dashboard</p>
+          <h1>Know your Codex limit.</h1>
+          <p class="hero-lede">
+            See account quota, Token usage, exhaustion forecasts, and local session value across macOS and Windows.
+          </p>
+          <div class="hero-actions" aria-label="Download QuotaDial">
+            <a
+              class="button button-primary"
+              href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_aarch64.dmg"
+            >
+              Download for macOS
+            </a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_windows_x64_setup.exe"
+            >
+              Download for Windows
+            </a>
+          </div>
+        </div>
+        <figure class="product-shot">
+          <img
+            src="assets/dashboard.webp"
+            width="1600"
+            height="861"
+            alt="QuotaDial dashboard showing remaining Codex quota, daily Token usage, forecast, and local project sessions"
+          />
+        </figure>
+      </section>
+
+      <section class="feature-section shell" id="features">
+        <div class="section-heading">
+          <h2>One view for the numbers that matter.</h2>
+          <p>QuotaDial keeps account data and local detail useful without pretending they are the same thing.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature feature-wide">
+            <span class="feature-index">Account-wide</span>
+            <h3>Quota and reset time</h3>
+            <p>Read the remaining weekly capacity directly from your signed-in Codex account, including activity from other devices.</p>
+            <div class="quota-visual" aria-label="Example quota: 41 percent remaining">
+              <strong>41%</strong>
+              <span>remaining</span>
+              <svg viewBox="0 0 520 150" role="img" aria-label="Example remaining quota falling over seven days">
+                <path class="grid-line" d="M10 26H510M10 76H510M10 126H510" />
+                <path class="pace-line" d="M10 20L510 128" />
+                <path class="quota-line" d="M10 22C68 25 83 44 132 52S207 66 255 80 323 91 370 106 444 116 510 126" />
+              </svg>
+            </div>
+          </article>
+          <article class="feature">
+            <span class="feature-index">Current computer</span>
+            <h3>Session-level Token detail</h3>
+            <p>Group child-agent activity into its parent session and compare monthly use by project and model.</p>
+          </article>
+          <article class="feature feature-accent">
+            <span class="feature-index">Forecast</span>
+            <h3>See the exhaustion date</h3>
+            <p>Turn recent quota movement into a practical forecast before the weekly limit reaches zero.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="scope-section shell" id="scope">
+        <div class="scope-copy">
+          <h2>Clear about where every number comes from.</h2>
+          <p>QuotaDial uses account data where Codex provides it and local session files where detailed breakdowns are needed.</p>
+        </div>
+        <div class="scope-list">
+          <article>
+            <h3>All devices</h3>
+            <p>Weekly quota, reset time, and reported daily account Token usage.</p>
+          </article>
+          <article>
+            <h3>This computer</h3>
+            <p>Projects, sessions, models, monthly Tokens, and equivalent API value.</p>
+          </article>
+          <article>
+            <h3>Local by design</h3>
+            <p>Prompt text, responses, reasoning, and tool output are not copied into QuotaDial's database.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="download-section shell" id="download">
+        <div class="download-copy">
+          <h2>Install QuotaDial.</h2>
+          <p>Version 0.1.1 is available for Apple Silicon macOS and Windows 10/11 x64.</p>
+        </div>
+        <div class="download-options">
+          <a href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_aarch64.dmg">
+            <span>macOS</span>
+            <strong>Apple Silicon DMG</strong>
+          </a>
+          <a href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_windows_x64_setup.exe">
+            <span>Windows</span>
+            <strong>Windows 10/11 x64</strong>
+          </a>
+        </div>
+        <p class="signing-note">The current installers are not code-signed. Your operating system may ask you to confirm the first launch.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div class="brand footer-brand">
+          <img src="assets/logo.svg" width="32" height="32" alt="" />
+          <span>QuotaDial</span>
+        </div>
+        <p>Open source under the MIT License. Created by <a href="https://yetform.cyhao.space/">yetform</a>.</p>
+      </div>
+    </footer>
+  </body>
+</html>
