@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="QuotaDial 是面向 macOS 和 Windows 的原生 Codex 额度、Token 用量与等效费用仪表盘。"
+    />
+    <meta name="theme-color" content="#102b25" />
+    <meta property="og:title" content="QuotaDial | 清晰掌握 Codex 额度" />
+    <meta
+      property="og:description"
+      content="在一个原生仪表盘中查看账号级额度、每日 Token、耗尽预测与本机会话费用。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://polarislight.github.io/QuotaDial/zh-CN/" />
+    <meta
+      property="og:image"
+      content="https://polarislight.github.io/QuotaDial/assets/dashboard.webp"
+    />
+    <title>QuotaDial | 清晰掌握 Codex 额度</title>
+    <link rel="canonical" href="https://polarislight.github.io/QuotaDial/zh-CN/" />
+    <link rel="alternate" hreflang="en" href="https://polarislight.github.io/QuotaDial/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://polarislight.github.io/QuotaDial/zh-CN/" />
+    <link rel="icon" href="../assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <header class="site-header">
+      <nav class="nav shell" aria-label="主导航">
+        <a class="brand" href="#top" aria-label="QuotaDial 首页">
+          <img src="../assets/logo.svg" width="38" height="38" alt="" />
+          <span>QuotaDial</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">功能</a>
+          <a href="#scope">数据范围</a>
+          <a href="https://github.com/PolarisLight/QuotaDial">GitHub</a>
+          <a class="language-link" href="../" hreflang="en" lang="en">English</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" id="top">
+        <div class="hero-copy">
+          <p class="kicker">原生 Codex 用量仪表盘</p>
+          <h1>看清你的 Codex 额度。</h1>
+          <p class="hero-lede">
+            在 macOS 和 Windows 上查看账号额度、Token 用量、耗尽预测与本机会话价值。
+          </p>
+          <div class="hero-actions" aria-label="下载 QuotaDial">
+            <a
+              class="button button-primary"
+              href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_aarch64.dmg"
+            >
+              下载 macOS 版
+            </a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_windows_x64_setup.exe"
+            >
+              下载 Windows 版
+            </a>
+          </div>
+        </div>
+        <figure class="product-shot">
+          <img
+            src="../assets/dashboard.webp"
+            width="1600"
+            height="861"
+            alt="QuotaDial 仪表盘，展示 Codex 剩余额度、每日 Token、耗尽预测与本地项目会话"
+          />
+        </figure>
+      </section>
+
+      <section class="feature-section shell" id="features">
+        <div class="section-heading">
+          <h2>重要数字，一个界面看清。</h2>
+          <p>QuotaDial 同时提供账号数据与本机明细，并明确区分两种统计范围。</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature feature-wide">
+            <span class="feature-index">账号级</span>
+            <h3>额度与重置时间</h3>
+            <p>直接读取当前登录 Codex 账号的周额度，包括同一账号在其他设备上的活动。</p>
+            <div class="quota-visual" aria-label="额度示例：剩余 41%">
+              <strong>41%</strong>
+              <span>剩余</span>
+              <svg viewBox="0 0 520 150" role="img" aria-label="七日剩余额度逐渐下降的示例曲线">
+                <path class="grid-line" d="M10 26H510M10 76H510M10 126H510" />
+                <path class="pace-line" d="M10 20L510 128" />
+                <path class="quota-line" d="M10 22C68 25 83 44 132 52S207 66 255 80 323 91 370 106 444 116 510 126" />
+              </svg>
+            </div>
+          </article>
+          <article class="feature">
+            <span class="feature-index">当前电脑</span>
+            <h3>会话级 Token 明细</h3>
+            <p>将子代理用量归并到所属会话，并按项目与模型比较本月使用情况。</p>
+          </article>
+          <article class="feature feature-accent">
+            <span class="feature-index">预测</span>
+            <h3>提前看到耗尽时间</h3>
+            <p>根据近期额度变化生成实用预测，在周额度归零前及时调整使用速度。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="scope-section shell" id="scope">
+        <div class="scope-copy">
+          <h2>每个数字的来源都说清楚。</h2>
+          <p>Codex 提供账号数据时使用账号范围，需要详细拆分时读取本机会话文件。</p>
+        </div>
+        <div class="scope-list">
+          <article>
+            <h3>所有设备</h3>
+            <p>周额度、重置时间，以及账号返回的每日 Token 用量。</p>
+          </article>
+          <article>
+            <h3>当前电脑</h3>
+            <p>项目、会话、模型、本月 Token 和等效 API 价值。</p>
+          </article>
+          <article>
+            <h3>本地优先</h3>
+            <p>提示词、回复正文、推理内容与工具输出不会复制到 QuotaDial 数据库。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="download-section shell" id="download">
+        <div class="download-copy">
+          <h2>安装 QuotaDial。</h2>
+          <p>v0.1.1 支持 Apple Silicon macOS 和 Windows 10/11 x64。</p>
+        </div>
+        <div class="download-options">
+          <a href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_aarch64.dmg">
+            <span>macOS</span>
+            <strong>Apple Silicon DMG</strong>
+          </a>
+          <a href="https://github.com/PolarisLight/QuotaDial/releases/download/v0.1.1/QuotaDial_0.1.1_windows_x64_setup.exe">
+            <span>Windows</span>
+            <strong>Windows 10/11 x64</strong>
+          </a>
+        </div>
+        <p class="signing-note">当前安装包尚未进行代码签名，操作系统可能要求你确认首次启动。</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div class="brand footer-brand">
+          <img src="../assets/logo.svg" width="32" height="32" alt="" />
+          <span>QuotaDial</span>
+        </div>
+        <p>项目采用 MIT 许可证开源，由 <a href="https://yetform.cyhao.space/">yetform</a> 创建。</p>
+      </div>
+    </footer>
+  </body>
+</html>
