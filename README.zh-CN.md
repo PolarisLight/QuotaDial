@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/PolarisLight/QuotaDial/releases/tag/v0.1.1"><img src="https://img.shields.io/badge/release-v0.1.1-72D6A7?style=flat-square&labelColor=15382E" alt="Release v0.1.1"></a>
-  <a href="https://polarislight.github.io/QuotaDial/"><img src="https://img.shields.io/badge/website-QuotaDial-72D6A7?style=flat-square&labelColor=15382E" alt="QuotaDial 项目主页"></a>
+  <a href="https://polarislight.github.io/QuotaDial/zh-CN/"><img src="https://img.shields.io/badge/website-QuotaDial-72D6A7?style=flat-square&labelColor=15382E" alt="QuotaDial 项目主页"></a>
   <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-F5F3EA?style=flat-square&labelColor=15382E" alt="macOS Apple Silicon">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011-8FA7FF?style=flat-square&labelColor=15382E" alt="Windows 10 / 11">
   <img src="https://img.shields.io/badge/built%20with-Tauri-8FA7FF?style=flat-square&labelColor=15382E" alt="Built with Tauri">
