@@ -249,7 +249,7 @@ export const backend = {
     return invoke<AppSettings>("save_app_settings", { settings });
   },
   getAppVersion: () => {
-    if (isWebPreview()) return Promise.resolve("0.1.1");
+    if (isWebPreview()) return Promise.resolve("0.1.2");
     return import("@tauri-apps/api/app").then(module => module.getVersion());
   },
   onDashboardUpdated: (

@@ -95,6 +95,10 @@ fn codex_candidates() -> Vec<OsString> {
     {
         push_unique(
             &mut candidates,
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+        );
+        push_unique(
+            &mut candidates,
             "/Applications/ChatGPT.app/Contents/Resources/codex",
         );
         if let Some(home) = std::env::var_os("HOME") {
@@ -235,5 +239,17 @@ mod tests {
         push_unique(&mut candidates, "codex");
         push_unique(&mut candidates, "codex");
         assert_eq!(candidates, vec![OsString::from("codex")]);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn discovers_codex_bundled_in_current_chatgpt_desktop_layout() {
+        let expected = Path::new(
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+        );
+
+        assert!(codex_candidates()
+            .iter()
+            .any(|candidate| Path::new(candidate) == expected));
     }
 }

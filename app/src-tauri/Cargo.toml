@@ -1,6 +1,6 @@
 [package]
 name = "quotadial"
-version = "0.1.1"
+version = "0.1.2"
 description = "Cross-platform Codex and Claude usage quota dashboard"
 authors = ["yetform"]
 repository = "https://github.com/PolarisLight/QuotaDial"
