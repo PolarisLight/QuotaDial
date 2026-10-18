@@ -34,6 +34,10 @@ function totalTokens(tokens: TokenBreakdown) {
   return tokens.inputTokens + tokens.outputTokens;
 }
 
+function nonCachedTokens(tokens: TokenBreakdown) {
+  return Math.max(0, tokens.inputTokens - tokens.cachedInputTokens) + tokens.outputTokens;
+}
+
 function formatActivity(timestamp: number) {
   return new Intl.DateTimeFormat("zh-CN", {
     month: "numeric",
@@ -61,6 +65,13 @@ export function SessionDetails({ view }: SessionDetailsProps) {
   const [rescanning, setRescanning] = useState(false);
   const [sort, setSort] = useState<SessionSort>("recent");
   const projects = groupSessionsByProject(view.sessions, sort);
+  const monthlyProjects = projects.filter(
+    project => project.monthlySessions.length > 0,
+  );
+  const monthlySessionCount = monthlyProjects.reduce(
+    (total, project) => total + project.monthlySessions.length,
+    0,
+  );
 
   const rescan = async () => {
     setRescanning(true);
@@ -84,7 +95,10 @@ export function SessionDetails({ view }: SessionDetailsProps) {
         </div>
         {view.sessions.length > 0 && (
           <span className="session-scan-time">
-            {projects.length} 个项目 · {view.sessions.length} 个会话
+            <span>
+              本月 {monthlyProjects.length} 个项目 · {monthlySessionCount} 个会话
+            </span>
+            <small>总 Token 含缓存输入，不会重复相加</small>
           </span>
         )}
       </div>
@@ -128,7 +142,7 @@ export function SessionDetails({ view }: SessionDetailsProps) {
             <thead>
               <tr>
                 <th>项目</th>
-                <th>会话</th>
+                <th>本月会话</th>
                 <th>模型</th>
                 <th>
                   <button
@@ -199,7 +213,13 @@ function ProjectRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
   const detailsId = `project-details-${project.id.replace(/[^a-z0-9_-]/gi, "-")}`;
+  const visibleSessions = showHistory
+    ? project.sessions
+    : project.monthlySessions;
+  const hiddenHistoryCount =
+    project.sessions.length - project.monthlySessions.length;
   return (
     <>
       <tr className="session-row project-row">
@@ -223,11 +243,22 @@ function ProjectRow({
             </span>
           </button>
         </td>
-        <td>{project.sessions.length}</td>
+        <td className="project-session-count">
+          <strong>{project.monthlySessions.length}</strong>
+          <small>{project.sessions.length} 历史</small>
+        </td>
         <td className="session-secondary" title={project.models.join(", ")}>
           {modelLabel(project)}
         </td>
-        <td>{compactNumber.format(totalTokens(project.monthlyTokens))}</td>
+        <td
+          className="project-token-total"
+          title="总 Token = 输入（其中包含缓存输入）+ 输出"
+        >
+          <strong>{compactNumber.format(totalTokens(project.monthlyTokens))}</strong>
+          <small>
+            {compactNumber.format(nonCachedTokens(project.monthlyTokens))} 非缓存
+          </small>
+        </td>
         <td>
           {formatCost(
             project.monthlyEquivalentCostUsd,
@@ -240,16 +271,35 @@ function ProjectRow({
         <tr className="session-detail-row project-detail-row" id={detailsId}>
           <td colSpan={6}>
             <div className="project-session-header">
-              <span>{project.sessions.length} 个会话，按最近活动排序</span>
-              {project.childSessionCount > 0 && (
-                <span>包含 {project.childSessionCount} 个子任务</span>
-              )}
+              <span>
+                {showHistory
+                  ? `历史 ${project.sessions.length} 个会话`
+                  : `本月 ${project.monthlySessions.length} 个会话`}
+                ，按最近活动排序
+              </span>
+              <span className="project-session-header-actions">
+                {project.childSessionCount > 0 && (
+                  <span>项目历史含 {project.childSessionCount} 个子任务</span>
+                )}
+                {hiddenHistoryCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory(current => !current)}
+                  >
+                    {showHistory ? "仅看本月" : `查看 ${hiddenHistoryCount} 个历史会话`}
+                  </button>
+                )}
+              </span>
             </div>
-            <div className="project-session-list">
-              {project.sessions.map(session => (
-                <SessionDisclosure key={session.sessionId} session={session} />
-              ))}
-            </div>
+            {visibleSessions.length > 0 ? (
+              <div className="project-session-list">
+                {visibleSessions.map(session => (
+                  <SessionDisclosure key={session.sessionId} session={session} />
+                ))}
+              </div>
+            ) : (
+              <div className="project-session-month-empty">本月没有 Token 活动</div>
+            )}
           </td>
         </tr>
       )}
@@ -266,10 +316,18 @@ function SessionDisclosure({ session }: { session: SessionSummary }) {
           <small>{session.sessionId.slice(-8)}</small>
         </span>
         <span>{session.primaryModel ?? "未知模型"}</span>
-        <span>
-          {compactNumber.format(
-            totalTokens(session.monthlyTokens ?? session.tokens),
-          )}
+        <span className="session-token-total">
+          <strong>
+            {compactNumber.format(
+              totalTokens(session.monthlyTokens ?? session.tokens),
+            )}
+          </strong>
+          <small>
+            {compactNumber.format(
+              nonCachedTokens(session.monthlyTokens ?? session.tokens),
+            )}{" "}
+            非缓存
+          </small>
         </span>
         <span>
           {formatCost(
@@ -297,6 +355,10 @@ function SessionDisclosure({ session }: { session: SessionSummary }) {
         <div>
           <dt>历史缓存输入</dt>
           <dd>{fullNumber.format(session.tokens.cachedInputTokens)}</dd>
+        </div>
+        <div>
+          <dt>历史非缓存 Token</dt>
+          <dd>{fullNumber.format(nonCachedTokens(session.tokens))}</dd>
         </div>
         <div>
           <dt>历史输出</dt>

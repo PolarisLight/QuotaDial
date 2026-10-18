@@ -806,8 +806,17 @@ h2 {
 }
 
 .session-scan-time {
+  display: flex;
+  align-items: flex-end;
   color: var(--subtle);
   font-size: 10px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.session-scan-time small {
+  color: var(--muted);
+  font-size: 8px;
 }
 
 .setting-row select,
@@ -1000,6 +1009,44 @@ h2 {
   color: var(--muted);
 }
 
+.project-session-count strong,
+.project-session-count small {
+  display: block;
+}
+
+.project-token-total strong,
+.project-token-total small,
+.session-token-total strong,
+.session-token-total small {
+  display: block;
+}
+
+.project-token-total strong,
+.session-token-total strong {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.project-token-total small,
+.session-token-total small {
+  margin-top: 2px;
+  color: var(--subtle);
+  font-size: 8px;
+  font-weight: 400;
+}
+
+.project-session-count strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.project-session-count small {
+  margin-top: 2px;
+  color: var(--subtle);
+  font-size: 8px;
+}
+
 .session-detail-row td {
   padding: 0;
   background: color-mix(in srgb, var(--surface-raised) 74%, transparent);
@@ -1015,6 +1062,35 @@ h2 {
   padding: 10px 8px 8px 40px;
   color: var(--subtle);
   font-size: 9px;
+}
+
+.project-session-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-session-header-actions button {
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.project-session-header-actions button:hover {
+  text-decoration: underline;
+}
+
+.project-session-month-empty {
+  padding: 18px;
+  color: var(--subtle);
+  background: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 9px;
+  text-align: center;
 }
 
 .project-session-list {

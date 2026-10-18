@@ -23,7 +23,7 @@ function session(
     monthlyTokens: {
       inputTokens: monthlyTokens,
       cachedInputTokens: 0,
-      outputTokens: 10,
+      outputTokens: monthlyTokens > 0 ? 10 : 0,
       reasoningOutputTokens: 0,
     },
     equivalentCostUsd: 0.25,
@@ -79,5 +79,21 @@ describe("project session grouping", () => {
     );
 
     expect(groups.map(group => group.name)).toEqual(["large", "small"]);
+  });
+
+  test("separates current-month sessions from project history", () => {
+    const groups = groupSessionsByProject(
+      [
+        session("current", "H:\\vispfn", 200, 120),
+        session("historical", "H:\\vispfn", 100, 0),
+      ],
+      "recent",
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].sessions).toHaveLength(2);
+    expect(groups[0].monthlySessions.map(item => item.sessionId)).toEqual([
+      "current",
+    ]);
   });
 });

@@ -86,6 +86,7 @@ impl<'a> SessionImporter<'a> {
             .map(|state| ParseContext {
                 session_id: state.session_id.clone(),
                 current_model: state.current_model.clone(),
+                current_cwd: state.current_cwd.clone(),
             })
             .unwrap_or_default();
 
@@ -109,6 +110,7 @@ impl<'a> SessionImporter<'a> {
             parser_version: PARSER_VERSION,
             session_id: parsed.current_session_id.clone(),
             current_model: parsed.current_model.clone(),
+            current_cwd: parsed.current_cwd.clone(),
             last_error: None,
         };
         let inserted = self.repository.import_session_file(&state, &parsed)?;
@@ -256,6 +258,7 @@ mod tests {
                     parser_version: PARSER_VERSION - 1,
                     session_id: parsed.current_session_id.clone(),
                     current_model: parsed.current_model.clone(),
+                    current_cwd: parsed.current_cwd.clone(),
                     last_error: None,
                 },
                 &parsed,
