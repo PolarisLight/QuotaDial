@@ -43,6 +43,7 @@ pub struct SourceFileState {
     pub parser_version: i64,
     pub session_id: Option<String>,
     pub current_model: Option<String>,
+    pub current_cwd: Option<String>,
     pub last_error: Option<String>,
 }
 
@@ -233,7 +234,8 @@ impl AccountRepository {
         self.lock()?
             .query_row(
                 "SELECT path, generation, file_identity, byte_offset, observed_size,
-                        modified_at, parser_version, session_id, current_model, last_error
+                        modified_at, parser_version, session_id, current_model,
+                        current_cwd, last_error
                  FROM session_source_files
                  WHERE path = ?1
                  ORDER BY generation DESC
@@ -250,7 +252,8 @@ impl AccountRepository {
                         parser_version: row.get(6)?,
                         session_id: row.get(7)?,
                         current_model: row.get(8)?,
-                        last_error: row.get(9)?,
+                        current_cwd: row.get(9)?,
+                        last_error: row.get(10)?,
                     })
                 },
             )
@@ -272,11 +275,13 @@ impl AccountRepository {
         let mut inserted = 0_i64;
         for event in &parsed.events {
             inserted += transaction.execute(
-                "INSERT OR IGNORE INTO session_usage_events(
+                "INSERT INTO session_usage_events(
                     fingerprint, session_id, occurred_at, model,
                     input_tokens, cached_input_tokens, output_tokens,
-                    reasoning_output_tokens, source_path, source_offset
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                    reasoning_output_tokens, cwd, source_path, source_offset
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                 ON CONFLICT(fingerprint) DO UPDATE SET
+                    cwd = COALESCE(excluded.cwd, session_usage_events.cwd)",
                 params![
                     event.fingerprint,
                     event.session_id,
@@ -286,6 +291,7 @@ impl AccountRepository {
                     event.tokens.cached_input_tokens,
                     event.tokens.output_tokens,
                     event.tokens.reasoning_output_tokens,
+                    event.cwd,
                     event.source_path,
                     event.source_offset as i64,
                 ],
@@ -295,8 +301,9 @@ impl AccountRepository {
         transaction.execute(
             "INSERT INTO session_source_files(
                 path, generation, file_identity, byte_offset, observed_size,
-                modified_at, parser_version, session_id, current_model, last_error
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                modified_at, parser_version, session_id, current_model, current_cwd,
+                last_error
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
              ON CONFLICT(path, generation) DO UPDATE SET
                 file_identity = excluded.file_identity,
                 byte_offset = excluded.byte_offset,
@@ -305,6 +312,7 @@ impl AccountRepository {
                 parser_version = excluded.parser_version,
                 session_id = excluded.session_id,
                 current_model = excluded.current_model,
+                current_cwd = excluded.current_cwd,
                 last_error = excluded.last_error",
             params![
                 state.path,
@@ -316,6 +324,7 @@ impl AccountRepository {
                 state.parser_version,
                 state.session_id,
                 state.current_model,
+                state.current_cwd,
                 state.last_error,
             ],
         )?;
@@ -349,6 +358,7 @@ impl AccountRepository {
             .collect::<HashMap<_, _>>();
         let catalog = PriceCatalog::built_in();
         let mut groups: HashMap<String, SessionAccumulator> = HashMap::new();
+        let mut sessions_with_events = HashSet::new();
         let (period_start, period_end) = local_month_bounds(now)?;
         let mut monthly_summary = MonthlyUsageSummary {
             period_start,
@@ -356,17 +366,6 @@ impl AccountRepository {
             ..MonthlyUsageSummary::default()
         };
         let mut monthly_cost_usd = 0.0;
-
-        for (session_id, item) in &metadata {
-            let root_id = resolve_root(session_id, &parents);
-            let group = groups
-                .entry(root_id.clone())
-                .or_insert_with(|| SessionAccumulator::new(root_id));
-            group.last_active_at = group.last_active_at.max(item.last_active_at);
-            if session_id != &group.root_id {
-                group.child_ids.insert(session_id.clone());
-            }
-        }
 
         for event in events {
             let event_tokens = event.tokens.total();
@@ -390,9 +389,25 @@ impl AccountRepository {
             }
 
             let root_id = resolve_root(&event.session_id, &parents);
+            let root_project_path = metadata.get(&root_id).and_then(|item| item.cwd.clone());
+            let project_path = if event.model.as_deref().is_some_and(is_internal_review_model) {
+                root_project_path
+            } else {
+                event
+                    .cwd
+                    .clone()
+                    .or_else(|| {
+                        metadata
+                            .get(&event.session_id)
+                            .and_then(|item| item.cwd.clone())
+                    })
+                    .or(root_project_path)
+            };
+            let group_key = project_session_key(&root_id, project_path.as_deref());
             let group = groups
-                .entry(root_id.clone())
-                .or_insert_with(|| SessionAccumulator::new(root_id));
+                .entry(group_key)
+                .or_insert_with(|| SessionAccumulator::new(root_id, project_path));
+            sessions_with_events.insert(event.session_id.clone());
             group.tokens.input_tokens += event.tokens.input_tokens;
             group.tokens.cached_input_tokens += event.tokens.cached_input_tokens;
             group.tokens.output_tokens += event.tokens.output_tokens;
@@ -430,6 +445,28 @@ impl AccountRepository {
             }
         }
 
+        for (session_id, item) in &metadata {
+            let root_id = resolve_root(session_id, &parents);
+            let project_path = item
+                .cwd
+                .clone()
+                .or_else(|| metadata.get(&root_id).and_then(|root| root.cwd.clone()));
+            let group_key = project_session_key(&root_id, project_path.as_deref());
+            let group = if let Some(group) = groups.get_mut(&group_key) {
+                group
+            } else if sessions_with_events.contains(session_id) {
+                continue;
+            } else {
+                groups
+                    .entry(group_key)
+                    .or_insert_with(|| SessionAccumulator::new(root_id, project_path))
+            };
+            group.last_active_at = group.last_active_at.max(item.last_active_at);
+            if session_id != &group.root_id {
+                group.child_ids.insert(session_id.clone());
+            }
+        }
+
         let mut sessions = groups
             .into_values()
             .filter(|group| {
@@ -442,7 +479,7 @@ impl AccountRepository {
             })
             .map(|group| {
                 let root_metadata = metadata.get(&group.root_id);
-                let project_path = root_metadata.and_then(|item| item.cwd.clone());
+                let project_path = group.project_path;
                 let started_at = root_metadata
                     .map(|item| item.started_at)
                     .unwrap_or(group.last_active_at);
@@ -547,11 +584,13 @@ struct SessionEventRow {
     session_id: String,
     occurred_at: i64,
     model: Option<String>,
+    cwd: Option<String>,
     tokens: TokenBreakdown,
 }
 
 struct SessionAccumulator {
     root_id: String,
+    project_path: Option<String>,
     last_active_at: i64,
     tokens: TokenBreakdown,
     monthly_tokens: TokenBreakdown,
@@ -566,9 +605,10 @@ struct SessionAccumulator {
 }
 
 impl SessionAccumulator {
-    fn new(root_id: String) -> Self {
+    fn new(root_id: String, project_path: Option<String>) -> Self {
         Self {
             root_id,
+            project_path,
             last_active_at: 0,
             tokens: TokenBreakdown::default(),
             monthly_tokens: TokenBreakdown::default(),
@@ -582,6 +622,13 @@ impl SessionAccumulator {
             monthly_unpriced_tokens: 0,
         }
     }
+}
+
+fn project_session_key(root_id: &str, project_path: Option<&str>) -> String {
+    let project = project_path
+        .map(|path| path.replace('\\', "/").trim_end_matches('/').to_lowercase())
+        .unwrap_or_else(|| "__unknown__".to_owned());
+    format!("{root_id}\0{project}")
 }
 
 fn load_session_metadata(
@@ -609,7 +656,7 @@ fn load_session_metadata(
 
 fn load_session_events(connection: &Connection) -> Result<Vec<SessionEventRow>, AppError> {
     let mut statement = connection.prepare(
-        "SELECT session_id, occurred_at, model, input_tokens, cached_input_tokens,
+        "SELECT session_id, occurred_at, model, cwd, input_tokens, cached_input_tokens,
                 output_tokens, reasoning_output_tokens
          FROM session_usage_events",
     )?;
@@ -618,11 +665,12 @@ fn load_session_events(connection: &Connection) -> Result<Vec<SessionEventRow>, 
             session_id: row.get(0)?,
             occurred_at: row.get(1)?,
             model: row.get(2)?,
+            cwd: row.get(3)?,
             tokens: TokenBreakdown {
-                input_tokens: row.get(3)?,
-                cached_input_tokens: row.get(4)?,
-                output_tokens: row.get(5)?,
-                reasoning_output_tokens: row.get(6)?,
+                input_tokens: row.get(4)?,
+                cached_input_tokens: row.get(5)?,
+                output_tokens: row.get(6)?,
+                reasoning_output_tokens: row.get(7)?,
             },
         })
     })?;
@@ -838,6 +886,7 @@ mod tests {
             parser_version: PARSER_VERSION,
             session_id: parsed.current_session_id.clone(),
             current_model: parsed.current_model.clone(),
+            current_cwd: parsed.current_cwd.clone(),
             last_error: None,
         };
         repository.import_session_file(&state, &parsed).unwrap();
@@ -864,6 +913,35 @@ mod tests {
         assert_eq!(sessions[0].child_session_count, 1);
         assert_eq!(sessions[0].tokens.input_tokens, 1_300);
         assert_eq!(sessions[0].tokens.output_tokens, 280);
+    }
+
+    #[test]
+    fn splits_one_session_across_the_real_turn_working_directories() {
+        let repository = AccountRepository::open_in_memory().unwrap();
+        import_fixture(
+            &repository,
+            include_bytes!("../../tests/fixtures/sessions/mixed-project.jsonl"),
+            "mixed-project.jsonl",
+        );
+
+        let now = Local
+            .with_ymd_and_hms(2026, 7, 30, 12, 0, 0)
+            .single()
+            .unwrap()
+            .timestamp();
+        let sessions = repository.local_session_view(now).unwrap().sessions;
+        assert_eq!(sessions.len(), 2);
+
+        let other = sessions
+            .iter()
+            .find(|session| session.project_path.as_deref() == Some("E:\\other-project"))
+            .unwrap();
+        let vispfn = sessions
+            .iter()
+            .find(|session| session.project_path.as_deref() == Some("H:\\vispfn"))
+            .unwrap();
+        assert_eq!(other.tokens.total(), 110);
+        assert_eq!(vispfn.tokens.total(), 220);
     }
 
     #[test]

@@ -5,6 +5,10 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../../migrations/001_account.sql")),
     (2, include_str!("../../migrations/002_sessions.sql")),
     (3, include_str!("../../migrations/003_settings.sql")),
+    (
+        4,
+        include_str!("../../migrations/004_event_project_context.sql"),
+    ),
 ];
 
 pub fn run(connection: &mut Connection) -> Result<(), AppError> {
@@ -44,7 +48,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn migration_two_is_idempotent_and_preserves_account_observations() {
+    fn session_migrations_are_idempotent_and_preserve_account_observations() {
         let mut connection = Connection::open_in_memory().unwrap();
         run(&mut connection).unwrap();
         connection
@@ -78,7 +82,25 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
+        let event_cwd_column_count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('session_usage_events')
+                 WHERE name = 'cwd'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let source_cwd_column_count: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('session_source_files')
+                 WHERE name = 'current_cwd'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
         assert_eq!(account_count, 1);
         assert_eq!(session_table_count, 1);
+        assert_eq!(event_cwd_column_count, 1);
+        assert_eq!(source_cwd_column_count, 1);
     }
 }

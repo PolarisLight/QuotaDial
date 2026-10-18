@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{io::Read, path::Path};
 
-pub const PARSER_VERSION: i64 = 2;
+pub const PARSER_VERSION: i64 = 3;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct ParsedSessionMetadata {
@@ -24,6 +24,7 @@ pub struct ParsedUsageEvent {
     pub session_id: String,
     pub occurred_at: i64,
     pub model: Option<String>,
+    pub cwd: Option<String>,
     pub tokens: TokenBreakdown,
     pub source_path: String,
     pub source_offset: u64,
@@ -37,12 +38,14 @@ pub struct ParsedFile {
     pub skipped_lines: i64,
     pub current_session_id: Option<String>,
     pub current_model: Option<String>,
+    pub current_cwd: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ParseContext {
     pub session_id: Option<String>,
     pub current_model: Option<String>,
+    pub current_cwd: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,6 +84,7 @@ pub fn parse_reader_with_context(
     let mut skipped_lines = 0;
     let mut current_session_id = context.session_id;
     let mut current_model = context.current_model;
+    let mut current_cwd = context.current_cwd;
     let mut consumed = 0_u64;
 
     for segment in bytes.split_inclusive(|byte| *byte == b'\n') {
@@ -134,6 +138,7 @@ pub fn parse_reader_with_context(
                         .or_else(|| value.get("timestamp").and_then(Value::as_str)),
                 );
                 current_session_id = Some(session_id.to_owned());
+                current_cwd = cwd.clone();
                 metadata = Some(ParsedSessionMetadata {
                     session_id: session_id.to_owned(),
                     parent_session_id: parent_session_id(payload, session_id),
@@ -150,8 +155,12 @@ pub fn parse_reader_with_context(
                     .get("model")
                     .and_then(Value::as_str)
                     .map(str::to_owned);
+                if let Some(cwd) = payload.get("cwd").and_then(Value::as_str) {
+                    current_cwd = Some(cwd.to_owned());
+                }
                 if let Some(metadata) = metadata.as_mut() {
                     metadata.model = current_model.clone();
+                    metadata.cwd = current_cwd.clone();
                     metadata.last_active_at = metadata.last_active_at.max(occurred_at);
                 }
             }
@@ -194,6 +203,7 @@ pub fn parse_reader_with_context(
                     session_id: session_id.to_owned(),
                     occurred_at,
                     model: current_model.clone(),
+                    cwd: current_cwd.clone(),
                     tokens,
                     source_path: source_path.to_owned(),
                     source_offset: line_offset,
@@ -213,6 +223,7 @@ pub fn parse_reader_with_context(
         skipped_lines,
         current_session_id,
         current_model,
+        current_cwd,
     })
 }
 
@@ -296,6 +307,10 @@ mod tests {
         assert_eq!(parsed.events.len(), 1);
         assert_eq!(parsed.events[0].tokens.input_tokens, 300);
         assert_eq!(parsed.events[0].model.as_deref(), Some("gpt-5.6-codex"));
+        assert_eq!(
+            parsed.events[0].cwd.as_deref(),
+            Some("/tmp/example-project")
+        );
         assert!(!serde_json::to_string(&parsed)
             .unwrap()
             .contains("agent_nickname"));
@@ -326,5 +341,20 @@ mod tests {
         .unwrap();
         assert_eq!(parsed.skipped_lines, 1);
         assert_eq!(parsed.events.len(), 1);
+    }
+
+    #[test]
+    fn assigns_each_usage_event_to_the_active_turn_working_directory() {
+        let parsed = parse_reader(
+            include_bytes!("../../tests/fixtures/sessions/mixed-project.jsonl").as_slice(),
+            "mixed-project.jsonl",
+            0,
+        )
+        .unwrap();
+
+        assert_eq!(parsed.events.len(), 2);
+        assert_eq!(parsed.events[0].cwd.as_deref(), Some("E:\\other-project"));
+        assert_eq!(parsed.events[1].cwd.as_deref(), Some("H:\\vispfn"));
+        assert_eq!(parsed.current_cwd.as_deref(), Some("H:\\vispfn"));
     }
 }

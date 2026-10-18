@@ -8,11 +8,12 @@ function session(
   lastActiveAt: number,
   inputTokens: number,
   monthlyInputTokens = inputTokens,
+  projectPath = `/tmp/${sessionId}`,
 ): SessionSummary {
   return {
     sessionId,
     title: sessionId,
-    projectPath: `/tmp/${sessionId}`,
+    projectPath,
     lastActiveAt,
     primaryModel: "gpt-5.5",
     tokens: {
@@ -136,5 +137,57 @@ describe("SessionDetails", () => {
     const totalTokenItem = screen.getByText("历史总 Token").parentElement!;
     expect(within(totalTokenItem).getByText("1,000")).toBeVisible();
     expect(screen.getByText("历史总等效费用")).toBeVisible();
+  });
+
+  test("shows current-month session counts separately from project history", () => {
+    const current = session("current", 300, 1_000, 100, "/tmp/vispfn");
+    current.tokens.cachedInputTokens = 900;
+    current.monthlyTokens.cachedInputTokens = 90;
+    render(
+      <SessionDetails
+        view={{
+          sessions: [
+            current,
+            session("history", 200, 500, 0, "/tmp/vispfn"),
+          ],
+          monthlySummary: {
+            periodStart: 0,
+            periodEnd: 1_000,
+            tokens: {
+              inputTokens: 100,
+              cachedInputTokens: 0,
+              outputTokens: 0,
+              reasoningOutputTokens: 0,
+            },
+            equivalentCostUsd: 0.005,
+            pricedTokens: 100,
+            unpricedTokens: 0,
+          },
+          diagnostics: {
+            scannedFiles: 2,
+            skippedLines: 0,
+            lastImportedAt: 300,
+            lastError: null,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("本月 1 个项目 · 1 个会话")).toBeVisible();
+    expect(screen.getByText("总 Token 含缓存输入，不会重复相加")).toBeVisible();
+    const projectRow = screen.getByRole("row", { name: /vispfn/ });
+    const sessionCountCell = within(projectRow).getAllByRole("cell")[1];
+    expect(within(sessionCountCell).getByText("1")).toBeVisible();
+    expect(within(sessionCountCell).getByText("2 历史")).toBeVisible();
+    expect(within(projectRow).getByText("10 非缓存")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /vispfn/ }));
+    expect(screen.getByText("current")).toBeVisible();
+    expect(screen.queryByText("history")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "查看 1 个历史会话" }),
+    );
+    expect(screen.getByText("history")).toBeVisible();
   });
 });

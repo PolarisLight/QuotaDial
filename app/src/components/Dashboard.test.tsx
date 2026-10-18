@@ -326,7 +326,7 @@ describe("Dashboard", () => {
     expect(screen.getByText("example-project")).toBeVisible();
     expect(container.querySelectorAll("tbody .session-row")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /example-project/ }));
-    expect(screen.getByText("包含 1 个子任务")).toBeVisible();
+    expect(screen.getByText("项目历史含 1 个子任务")).toBeVisible();
     expect(screen.queryByText("根会话")).not.toBeInTheDocument();
   });
 
@@ -381,7 +381,7 @@ describe("Dashboard", () => {
     );
 
     expect(container.querySelectorAll("tbody .session-row")).toHaveLength(12);
-    expect(screen.getByText("12 个项目 · 12 个会话")).toBeVisible();
+    expect(screen.getByText("本月 12 个项目 · 12 个会话")).toBeVisible();
     expect(screen.getByText("project-8")).toBeVisible();
   });
 

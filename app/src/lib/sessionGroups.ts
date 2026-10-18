@@ -6,6 +6,7 @@ export interface SessionProjectGroup {
   name: string;
   projectPath: string | null;
   sessions: SessionSummary[];
+  monthlySessions: SessionSummary[];
   lastActiveAt: number;
   models: string[];
   tokens: TokenBreakdown;
@@ -37,6 +38,16 @@ function tokenTotal(tokens: TokenBreakdown) {
   return tokens.inputTokens + tokens.outputTokens;
 }
 
+function hasTokenActivity(tokens: TokenBreakdown) {
+  return (
+    tokens.inputTokens +
+      tokens.cachedInputTokens +
+      tokens.outputTokens +
+      tokens.reasoningOutputTokens >
+    0
+  );
+}
+
 function normalizedProject(path: string | null) {
   if (!path) return "__unknown__";
   return path
@@ -64,6 +75,7 @@ export function groupSessionsByProject(
         name: projectName(session.projectPath),
         projectPath: session.projectPath,
         sessions: [],
+        monthlySessions: [],
         lastActiveAt: 0,
         models: [],
         tokens: emptyTokens(),
@@ -104,6 +116,9 @@ export function groupSessionsByProject(
       right.lastActiveAt === left.lastActiveAt
         ? left.sessionId.localeCompare(right.sessionId)
         : right.lastActiveAt - left.lastActiveAt,
+    );
+    group.monthlySessions = group.sessions.filter(session =>
+      hasTokenActivity(session.monthlyTokens ?? session.tokens),
     );
     group.models = [
       ...new Set(
